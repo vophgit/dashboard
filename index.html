@@ -139,6 +139,10 @@
       <h3>Otevřené úkoly podle sekce</h3>
       <table class="mini-table" id="bySectionTable"><tbody></tbody></table>
     </div>
+    <div class="side-panel">
+      <h3>Hotovo podle osoby</h3>
+      <table class="mini-table" id="doneByPersonTable"><tbody></tbody></table>
+    </div>
   </aside>
 
   <div class="main-col">
@@ -163,18 +167,6 @@
         <tbody id="taskBody"><tr><td colspan="6">Načítám…</td></tr></tbody>
       </table>
     </div>
-  </section>
-
-  <!-- HOTOVO PODLE OSOBY (přesunuto pod Úkol) -->
-  <section class="panel">
-    <h2>Hotovo podle osoby</h2>
-    <div class="desc">Celkem dokončených úkolů (z completions-log), celý tým.</div>
-    <div class="filters">
-      <select id="hOsoba"><option value="">Osoba — všichni —</option></select>
-      <select id="hSekce"><option value="">Sekce — všechny —</option></select>
-      <select id="hDomena"><option value="">Doména — všechny —</option></select>
-    </div>
-    <table class="mini-table" id="doneByPersonTable"><tbody></tbody></table>
   </section>
 
   <!-- NOVÉ: SPLNĚNÉ ÚKOLY (zrcadlí Úkol + datum splnění) -->
@@ -304,15 +296,11 @@ function vophPopulateFilterOptions(){
   document.getElementById("fSection").innerHTML = `<option value="">Sekce — všechny —</option>` + sectionOpts;
   document.getElementById("fDomain").innerHTML = `<option value="">Doména — všechny —</option>` + domainOpts;
 
-  document.getElementById("hOsoba").innerHTML = `<option value="">Osoba — všichni —</option>` + personOpts;
-  document.getElementById("hSekce").innerHTML = `<option value="">Sekce — všechny —</option>` + sectionOpts;
-  document.getElementById("hDomena").innerHTML = `<option value="">Doména — všechny —</option>` + domainOpts;
-
   document.getElementById("dOsoba").innerHTML = `<option value="">Osoba — všichni —</option>` + personOpts;
   document.getElementById("dSekce").innerHTML = `<option value="">Sekce — všechny —</option>` + sectionOpts;
   document.getElementById("dDomena").innerHTML = `<option value="">Doména — všechny —</option>` + domainOpts;
 
-  ["fSection","fDomain","hOsoba","hSekce","hDomena","dOsoba","dSekce","dDomena"]
+  ["fSection","fDomain","dOsoba","dSekce","dDomena"]
     .forEach(id => document.getElementById(id).addEventListener("change", vophRenderAll));
 }
 
@@ -475,23 +463,14 @@ async function vophSubmitCompletion(id){
   document.getElementById("syncStatus").textContent = `Splnění ${id} zapsáno do fronty — projeví se po syncu.`;
 }
 
-/* ---------- Hotovo podle osoby (panel, pod tabulkou Úkol) ---------- */
-function vophFilteredDoneForSummary(){
-  const osoba = document.getElementById("hOsoba").value;
-  const sekce = document.getElementById("hSekce").value;
-  const domena = document.getElementById("hDomena").value;
-  return doneTasks.filter(t =>
-    (!osoba || t.who===osoba) && (!sekce || t.block===sekce) && (!domena || t.domain===domena)
-  );
-}
+/* ---------- Hotovo podle osoby (floating panel v sidebaru, bez filtrů) ---------- */
 function vophRenderDoneByPerson(){
-  const filtered = vophFilteredDoneForSummary();
   const counts = {};
-  filtered.forEach(t => counts[t.who] = (counts[t.who]||0)+1);
+  doneTasks.forEach(t => counts[t.who] = (counts[t.who]||0)+1);
   const rows = Object.entries(counts).sort((a,b)=>b[1]-a[1])
     .map(([k,v]) => `<tr><td>${k}</td><td class="n">${v}</td></tr>`).join("");
   document.getElementById("doneByPersonTable").innerHTML =
-    `<thead><tr><th>Osoba</th><th style="text-align:right">Počet splněných</th></tr></thead><tbody>${rows || '<tr><td colspan="2" style="color:var(--muted)">Žádné položky.</td></tr>'}</tbody>`;
+    `<thead><tr><th>Osoba</th><th style="text-align:right">Počet</th></tr></thead><tbody>${rows || '<tr><td colspan="2" style="color:var(--muted)">Žádné položky.</td></tr>'}</tbody>`;
 }
 
 /* ---------- Splněné úkoly (nová plná tabulka, zrcadlí Úkol) ---------- */
