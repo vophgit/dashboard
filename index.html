@@ -47,13 +47,24 @@
   .callout b{white-space:nowrap;}
   .callout.priority{background:var(--slate-soft); color:var(--navy); border:1px solid #C7D6E2;}
   .callout.urgent{background:var(--red-soft); color:var(--red); border:1px solid #EBC9C2;}
+  .callout.termin{background:var(--green-soft); color:var(--green); border:1px solid #C3E1CF;}
   .callout.overdue{background:var(--amber-soft); color:var(--amber); border:1px solid #ECD6AE;}
+  .callouts-empty{font-size:12.5px; color:var(--muted); padding:6px 2px;}
 
-  .two-col{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
-  @media (max-width:720px){.two-col{grid-template-columns:1fr;}}
-  .mini-table{width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;}
-  .mini-table th{background:var(--slate-soft); text-align:left; padding:8px 12px; font-size:12px; color:var(--navy);}
-  .mini-table td{padding:7px 12px; border-top:1px solid var(--line); font-size:13px;}
+  /* Layout: floating sidebar (levý sloupec) + hlavní obsah */
+  .layout{display:flex; align-items:flex-start; gap:20px; margin-top:20px;}
+  .sidebar{flex:0 0 250px; width:250px; position:sticky; top:16px; display:flex; flex-direction:column; gap:16px;}
+  .main-col{flex:1; min-width:0;}
+  .side-panel{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px;}
+  .side-panel h3{font-size:13px; margin-bottom:8px; color:var(--navy);}
+  @media (max-width:860px){
+    .layout{flex-direction:column;}
+    .sidebar{position:static; width:100%; flex-direction:row; flex-wrap:wrap;}
+    .side-panel{flex:1 1 260px;}
+  }
+  .mini-table{width:100%; border-collapse:collapse; background:var(--card); border-radius:var(--radius); overflow:hidden;}
+  .mini-table th{background:var(--slate-soft); text-align:left; padding:7px 10px; font-size:11.5px; color:var(--navy);}
+  .mini-table td{padding:6px 10px; border-top:1px solid var(--line); font-size:12.5px;}
   .mini-table td.n{text-align:right; font-family:'JetBrains Mono'; color:var(--slate);}
 
   .panel{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:18px;}
@@ -117,21 +128,24 @@
 </header>
 
 <div class="wrap">
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="side-panel">
+      <h3>Otevřené úkoly podle osoby</h3>
+      <table class="mini-table" id="byPersonTable"><tbody></tbody></table>
+    </div>
+    <div class="side-panel">
+      <h3>Otevřené úkoly podle sekce</h3>
+      <table class="mini-table" id="bySectionTable"><tbody></tbody></table>
+    </div>
+  </aside>
+
+  <div class="main-col">
 
   <section id="statsSection">
     <div class="grid-stats" id="statsGrid"><div class="stat"><div class="num">…</div><div class="lbl">načítám</div></div></div>
     <div class="callouts" id="callouts"></div>
-  </section>
-
-  <section class="two-col">
-    <div>
-      <h3 style="font-size:14px; margin-bottom:8px;">Otevřené úkoly podle osoby</h3>
-      <table class="mini-table" id="byPersonTable"><tbody></tbody></table>
-    </div>
-    <div>
-      <h3 style="font-size:14px; margin-bottom:8px;">Otevřené úkoly podle sekce</h3>
-      <table class="mini-table" id="bySectionTable"><tbody></tbody></table>
-    </div>
   </section>
 
   <!-- ÚKOL -->
@@ -192,8 +206,11 @@
     </ul>
   </section>
 
+  </div><!-- /main-col -->
+</div><!-- /layout -->
+
   <footer>VOPH.CZ · Centrum PH · dashboard čte přímo z privátního repozitáře <span class="mono">voph-tasks</span></footer>
-</div>
+</div><!-- /wrap -->
 
 <script>
 /* ============================================================
@@ -335,17 +352,31 @@ function vophRenderStats(){
 }
 
 function vophRenderCallouts(){
+  const who = vophWhoAmI();
+  const scope = who === "Všichni" ? openTasks : openTasks.filter(t => t.who === who);
+
   const out = [];
   const today = new Date().toISOString().slice(0,10);
-  const overdue = openTasks.filter(t => t.due && t.due < today);
-  const urgent = openTasks.filter(t => t.block==="platby" && /VÝJIMKA/i.test(t.desc));
-  const priority = openTasks.filter(t => /TOP PRIORITA/i.test(t.desc));
+  const in3d = new Date(Date.now() + 3*86400000).toISOString().slice(0,10);
 
-  priority.slice(0,1).forEach(t => out.push(`<div class="callout priority"><b>▲ PRIORITA</b> ${t.desc} (${t.who})</div>`));
-  urgent.slice(0,1).forEach(t => out.push(`<div class="callout urgent"><b>▲ URGENTNÍ PLATBA</b> ${t.desc} (${t.who})</div>`));
+  const priority = scope.filter(t => /TOP PRIORITA/i.test(t.desc));
+  const urgent = scope.filter(t => t.block==="platby" && /VÝJIMKA/i.test(t.desc));
+  const overdue = scope.filter(t => t.due && t.due < today);
+  const upcoming = scope.filter(t => t.due && t.due >= today && t.due <= in3d);
+
+  priority.slice(0,1).forEach(t => out.push(`<div class="callout priority"><b>▲ PRIORITA</b> ${vophEsc(t.desc)} (${t.who})</div>`));
+  urgent.slice(0,1).forEach(t => out.push(`<div class="callout urgent"><b>▲ URGENTNÍ PLATBA</b> ${vophEsc(t.desc)} (${t.who})</div>`));
+
+  if(upcoming.length){
+    out.push(`<div class="callout termin"><b>◷ TERMÍN (${upcoming.length})</b></div>`);
+    upcoming.slice(0,6).forEach(t => out.push(`<div class="callout termin">${t.who}: ${vophEsc(t.desc)} — do ${t.due}</div>`));
+  }
   if(overdue.length){
     out.push(`<div class="callout overdue"><b>⚠ PO TERMÍNU (${overdue.length})</b></div>`);
-    overdue.slice(0,6).forEach(t => out.push(`<div class="callout overdue">${t.who}: ${t.desc}</div>`));
+    overdue.slice(0,6).forEach(t => out.push(`<div class="callout overdue">${t.who}: ${vophEsc(t.desc)}</div>`));
+  }
+  if(!out.length){
+    out.push(`<div class="callouts-empty">Žádné prioritní, urgentní ani termínované položky${who!=="Všichni" ? " pro "+who : ""}.</div>`);
   }
   document.getElementById("callouts").innerHTML = out.join("");
 }
