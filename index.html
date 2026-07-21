@@ -99,6 +99,41 @@
   #tokenBox{background:var(--amber-soft); border:1px solid #ECD6AE; border-radius:var(--radius); padding:14px 16px; margin-top:16px; display:none;}
   #tokenBox input{font:inherit; padding:7px 10px; border-radius:6px; border:1px solid var(--line); width:280px;}
   #tokenBox button{font:inherit; padding:7px 14px; border-radius:6px; border:none; background:var(--navy); color:#fff; cursor:pointer;}
+
+  /* Floating panel vpravo — přidání úkolu přímo z dashboardu (přesouvatelný, měnitelná velikost) */
+  .float-add{
+    position:fixed; top:110px; right:20px; width:290px; z-index:60;
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:0 6px 24px rgba(27,36,48,.14); max-height:calc(100vh - 40px); overflow:auto;
+    resize:both; min-width:240px; min-height:170px;
+  }
+  .float-add.collapsed{resize:none; overflow:hidden;}
+  .float-add-head{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:12px 14px; background:var(--navy); color:#fff; border-radius:var(--radius) var(--radius) 0 0;
+    cursor:move; user-select:none; touch-action:none;
+  }
+  .float-add-head h3{color:#fff; font-size:13.5px; margin:0; pointer-events:none;}
+  .float-add-head .chev{transition:transform .15s; pointer-events:none;}
+  .float-add.collapsed .float-add-head .chev{transform:rotate(-90deg);}
+  .float-add.collapsed .float-add-body{display:none;}
+  .float-add-body{padding:14px;}
+  .float-add-body label{display:block; font-size:11.5px; color:var(--muted); margin:8px 0 3px; text-transform:uppercase; letter-spacing:.03em;}
+  .float-add-body label:first-child{margin-top:0;}
+  .float-add-body select, .float-add-body input, .float-add-body textarea{
+    width:100%; font:inherit; font-size:13px; padding:7px 9px; border-radius:7px; border:1px solid var(--line); background:#fff; color:var(--ink);
+  }
+  .float-add-body textarea{resize:vertical; min-height:60px;}
+  .float-add-submit{
+    margin-top:12px; width:100%; padding:9px; border-radius:7px; border:none;
+    background:var(--green); color:#fff; font-weight:600; font-size:13px; cursor:pointer;
+  }
+  .float-add-submit:hover{filter:brightness(1.06);}
+  .float-add-submit:disabled{opacity:.6; cursor:default;}
+  .float-add-status{font-size:12px; color:var(--muted); margin-top:8px; min-height:14px;}
+  @media (max-width:1000px){
+    .float-add{position:static; width:auto; margin:20px 0 0; max-height:none;}
+  }
 </style>
 </head>
 <body>
@@ -126,6 +161,34 @@
     </div>
   </div>
 </header>
+
+<div class="float-add" id="floatAdd">
+  <div class="float-add-head" id="floatAddHead">
+    <h3>➕ Přidat úkol</h3>
+    <span class="chev" id="floatAddChev" onclick="event.stopPropagation(); vophToggleFloatAdd();" style="cursor:pointer; pointer-events:auto; padding:2px 6px;">▾</span>
+  </div>
+  <div class="float-add-body">
+    <label>Kdo</label>
+    <select id="faWho"></select>
+    <label>Doména</label>
+    <select id="faDomain"></select>
+    <label>Blok</label>
+    <select id="faBlock">
+      <option value="inbox" selected>Inbox</option>
+      <option value="next">Next steps</option>
+      <option value="easy">Next steps – easy</option>
+      <option value="waiting">Waiting for</option>
+      <option value="platby">Platby</option>
+      <option value="someday">Some other time</option>
+    </select>
+    <label>Termín (volitelně)</label>
+    <input type="date" id="faDue">
+    <label>Popis</label>
+    <textarea id="faDesc" placeholder="Kontext, částky, kontakty…"></textarea>
+    <button class="float-add-submit" id="faSubmit" onclick="vophAddTaskFromFloat()">Přidat úkol</button>
+    <div class="float-add-status" id="faStatus"></div>
+  </div>
+</div>
 
 <div class="wrap">
 <div class="layout">
@@ -274,6 +337,8 @@ async function vophLoadAll(){
 ============================================================ */
 function vophOnWhoChange(){
   localStorage.setItem("voph_who_am_i", document.getElementById("whoSelect").value);
+  const who = vophWhoAmI();
+  if(who && who !== "Všichni") document.getElementById("faWho").value = who;
   vophRenderAll();
 }
 (function initWho(){
@@ -302,6 +367,155 @@ function vophPopulateFilterOptions(){
 
   ["fSection","fDomain","dOsoba","dSekce","dDomena"]
     .forEach(id => document.getElementById(id).addEventListener("change", vophRenderAll));
+}
+
+/* ============================================================
+   FLOATING PANEL — Přidat úkol přímo z dashboardu
+============================================================ */
+function vophInitFloatAddForm(){
+  document.getElementById("faWho").innerHTML = TEAM.map(p => `<option>${p}</option>`).join("");
+  document.getElementById("faDomain").innerHTML = DOMAINS.map(d => `<option>${d}</option>`).join("");
+  const who = vophWhoAmI();
+  if(who && who !== "Všichni") document.getElementById("faWho").value = who;
+
+  if(localStorage.getItem("voph_float_add_collapsed") === "1"){
+    document.getElementById("floatAdd").classList.add("collapsed");
+  }
+  vophRestoreFloatAddGeometry();
+  vophInitFloatAddDrag();
+  vophInitFloatAddResizeSave();
+}
+
+/* ---------- Přesouvání myší (drag), pozice se pamatuje ---------- */
+function vophInitFloatAddDrag(){
+  const panel = document.getElementById("floatAdd");
+  const head = document.getElementById("floatAddHead");
+  let startX, startY, startLeft, startTop, moved = false;
+
+  head.addEventListener("mousedown", (e) => {
+    if(e.target.id === "floatAddChev") return;
+    e.preventDefault();
+    const rect = panel.getBoundingClientRect();
+    // Přepnout z right/top na pevné left/top v px, aby šlo volně táhnout
+    panel.style.left = rect.left + "px";
+    panel.style.top = rect.top + "px";
+    panel.style.right = "auto";
+    startX = e.clientX; startY = e.clientY;
+    startLeft = rect.left; startTop = rect.top;
+    moved = false;
+
+    function onMove(e2){
+      const dx = e2.clientX - startX, dy = e2.clientY - startY;
+      if(Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
+      let newLeft = startLeft + dx, newTop = startTop + dy;
+      newLeft = Math.max(0, Math.min(window.innerWidth - 60, newLeft));
+      newTop = Math.max(0, Math.min(window.innerHeight - 40, newTop));
+      panel.style.left = newLeft + "px";
+      panel.style.top = newTop + "px";
+    }
+    function onUp(){
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      if(moved){
+        localStorage.setItem("voph_float_add_pos", JSON.stringify({
+          left: panel.style.left, top: panel.style.top
+        }));
+      }
+    }
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  });
+}
+
+/* ---------- Změna velikosti myší (nativní CSS resize), rozměr se pamatuje ---------- */
+function vophInitFloatAddResizeSave(){
+  const panel = document.getElementById("floatAdd");
+  if(typeof ResizeObserver === "undefined") return;
+  let first = true;
+  const ro = new ResizeObserver(() => {
+    if(first){ first = false; return; } // ignorovat počáteční layout
+    localStorage.setItem("voph_float_add_size", JSON.stringify({
+      width: panel.style.width || panel.offsetWidth + "px",
+      height: panel.style.height || panel.offsetHeight + "px"
+    }));
+  });
+  ro.observe(panel);
+}
+
+function vophRestoreFloatAddGeometry(){
+  const panel = document.getElementById("floatAdd");
+  try{
+    const pos = JSON.parse(localStorage.getItem("voph_float_add_pos") || "null");
+    if(pos){ panel.style.left = pos.left; panel.style.top = pos.top; panel.style.right = "auto"; }
+  }catch(e){}
+  try{
+    const size = JSON.parse(localStorage.getItem("voph_float_add_size") || "null");
+    if(size){ panel.style.width = size.width; panel.style.height = size.height; }
+  }catch(e){}
+}
+
+function vophToggleFloatAdd(){
+  const el = document.getElementById("floatAdd");
+  el.classList.toggle("collapsed");
+  localStorage.setItem("voph_float_add_collapsed", el.classList.contains("collapsed") ? "1" : "0");
+}
+
+function vophGenTaskId(){
+  const d = new Date();
+  const pad = n => String(n).padStart(2,"0");
+  const stamp = d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate());
+  return `t-${stamp}-${Math.random().toString(16).slice(2,6)}`;
+}
+
+/* Sdílená funkce: zapíše libovolnou položku do fronty inbox/ (nový soubor = žádná kolize) */
+async function vophPushInboxItem(payload){
+  const token = vophToken();
+  if(!token){ vophNeedToken("Nejdřív vlož token."); return false; }
+  const d = new Date();
+  const pad = n => String(n).padStart(2,"0");
+  const name = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-`+
+               `${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}-`+
+               Math.random().toString(16).slice(2,6)+".json";
+  const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  const res = await fetch(`https://api.github.com/repos/${VOPH_OWNER}/${VOPH_REPO}/contents/inbox/${name}`, {
+    method:"PUT",
+    headers:{ "Authorization":"Bearer "+token, "Accept":"application/vnd.github+json" },
+    body: JSON.stringify({ message:`dashboard: ${payload.action} (${payload.who||payload.completed_by||""})`, content:b64 })
+  });
+  if(res.status===401 || res.status===403){
+    localStorage.removeItem("voph_gh_token");
+    vophNeedToken("Token neplatí nebo vypršel — vlož nový.");
+    return false;
+  }
+  return res.ok;
+}
+
+async function vophAddTaskFromFloat(){
+  const who = document.getElementById("faWho").value;
+  const domain = document.getElementById("faDomain").value;
+  const block = document.getElementById("faBlock").value;
+  const due = document.getElementById("faDue").value || null;
+  const desc = document.getElementById("faDesc").value.trim();
+  const status = document.getElementById("faStatus");
+  const btn = document.getElementById("faSubmit");
+
+  if(!desc){ status.textContent = "Popis nesmí být prázdný."; return; }
+
+  btn.disabled = true; status.textContent = "Odesílám…";
+  const id = vophGenTaskId();
+  const ok = await vophPushInboxItem({
+    action:"add", id, who, domain, block, desc, due,
+    source:"dashboard", ts:new Date().toISOString()
+  });
+  btn.disabled = false;
+
+  if(ok){
+    status.textContent = `Přidáno do fronty (${id}). Projeví se po syncu.`;
+    document.getElementById("faDesc").value = "";
+    document.getElementById("faDue").value = "";
+  } else if(status.textContent === "Odesílám…"){
+    status.textContent = "Odeslání selhalo — zkus to znovu.";
+  }
 }
 
 /* ============================================================
@@ -447,20 +661,11 @@ async function vophSubmitCompletion(id){
   const task = openTasks.find(t => t.id === id);
   const who = vophWhoAmI();
   const completedBy = (who && who !== "Všichni") ? who : (task ? task.who : "Nam");
-  const token = vophToken();
-  if(!token){ vophNeedToken("Nejdřív vlož token."); return; }
-  const d = new Date();
-  const pad = n => String(n).padStart(2,"0");
-  const name = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-`+
-               `${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}-`+
-               Math.random().toString(16).slice(2,6)+".json";
   const payload = { action:"complete", id, completed_by: completedBy, source:"dashboard", ts:new Date().toISOString() };
-  await fetch(`https://api.github.com/repos/${VOPH_OWNER}/${VOPH_REPO}/contents/inbox/${name}`, {
-    method:"PUT",
-    headers:{ "Authorization":"Bearer "+token, "Accept":"application/vnd.github+json" },
-    body: JSON.stringify({ message:`dashboard: complete (${completedBy})`, content: btoa(unescape(encodeURIComponent(JSON.stringify(payload)))) })
-  });
-  document.getElementById("syncStatus").textContent = `Splnění ${id} zapsáno do fronty — projeví se po syncu.`;
+  const ok = await vophPushInboxItem(payload);
+  document.getElementById("syncStatus").textContent = ok
+    ? `Splnění ${id} zapsáno do fronty — projeví se po syncu.`
+    : `Odeslání splnění ${id} selhalo — zkus to znovu.`;
 }
 
 /* ---------- Hotovo podle osoby (floating panel v sidebaru, bez filtrů) ---------- */
@@ -548,6 +753,7 @@ async function vophSyncNow(){
 /* ============================================================
    START
 ============================================================ */
+vophInitFloatAddForm();
 vophLoadAll();
 </script>
 </body>
