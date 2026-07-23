@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Přehled kontroly — Centrum PH / VOPH.CZ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Poppins:wght@600;700&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     /* Značka VOPH — oficiální oranžová (meta-theme-color na voph.cz) */
@@ -26,14 +26,12 @@
   header.top h1{color:#fff; font-size:20px; letter-spacing:.2px;}
   header.top .sub{color:#FFE3D1; font-size:12.5px; margin-top:4px;}
   .head-row{display:flex; align-items:flex-start; justify-content:space-between; gap:16px;}
-  .head-logo{height:38px; flex-shrink:0;}
-  .head-logo-fallback{
-    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:22px; color:#fff;
-    letter-spacing:.5px; flex-shrink:0; background:#fff; color:var(--brand);
-    padding:4px 12px; border-radius:6px;
+  .head-logo-text{
+    font-family:'Poppins',sans-serif; font-weight:700; color:#fff; letter-spacing:.5px;
+    white-space:nowrap; line-height:1; flex-shrink:0; display:flex; align-items:baseline;
   }
-  .head-logo-fallback span{font-weight:500;}
-  .wrap{max-width:1280px; margin:0 auto; padding:0 clamp(16px,4vw,40px);}
+  .head-logo-text .dim{font-weight:600; opacity:.82;}
+  .wrap{max-width:1900px; width:100%; margin:0 auto; padding:0 clamp(16px,2.5vw,32px);}
 
   .toolbar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:18px;}
   .toolbar select, .toolbar button{
@@ -154,12 +152,11 @@
 <header class="top">
   <div class="wrap">
     <div class="head-row">
-      <div>
+      <div id="headTitleBlock">
         <h1>Přehled kontroly — Centrum PH / VOPH.CZ</h1>
         <div class="sub">Zdroj: <span class="mono">vophgit/voph-tasks</span> · <span id="lastLoaded">načítám…</span></div>
       </div>
-      <img class="head-logo" src="https://voph.cz/template/eshop5/special/image/logo.svg" alt="VOPH.CZ"
-           onerror="this.onerror=null; this.outerHTML='<span class=\'head-logo-fallback\'>VOPH<span>.CZ</span></span>';">
+      <div class="head-logo-text" id="headLogoText">VOPH<span class="dim">.CZ</span></div>
     </div>
 
     <div class="toolbar">
