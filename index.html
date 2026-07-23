@@ -100,6 +100,22 @@
 
   /* Editovatelné buňky Sekce / Doména / Termín */
   .editable-cell{cursor:pointer; min-width:120px;}
+
+  .popis-cell{min-width:220px;}
+  .popis-display{cursor:pointer; padding:2px 3px; border-radius:4px;}
+  .popis-display:hover{background:var(--brand-softer);}
+  .popis-editor textarea{
+    width:100%; min-height:54px; font:inherit; font-size:13px; padding:6px 8px;
+    border-radius:6px; border:1px solid var(--brand); resize:vertical;
+  }
+  .popis-editor .editor-actions{display:flex; gap:6px; margin-top:5px;}
+  .popis-editor .editor-actions button{font:inherit; font-size:11.5px; padding:4px 9px; border-radius:5px; border:1px solid var(--line); background:#fff; cursor:pointer;}
+  .popis-editor .editor-actions button.ok{background:var(--brand); border-color:var(--brand); color:#fff; font-weight:600;}
+
+  .comments-list{margin-top:5px;}
+  .comment-line{font-size:11px; color:var(--ink); padding:3px 0; border-top:1px dashed var(--line);}
+  .comment-line:first-child{border-top:none;}
+  .comment-meta{color:var(--muted); font-style:italic;}
   .editable-cell:hover{background:var(--brand-softer);}
   .editable-cell .tag-list:empty::after{content:"— klikni pro výběr —"; color:var(--muted); font-size:11.5px; font-style:italic;}
   .cell-editor{background:#fff; border:1px solid var(--brand); border-radius:6px; padding:6px; font-size:12px; min-width:170px;}
@@ -498,7 +514,13 @@ function vophRenderTaskTable(){
   const addRowHtml = vophAddRowHtml();
   document.getElementById("taskBody").innerHTML = addRowHtml + (rows.length ? rows.map(t => `
     <tr data-id="${t.id}">
-      <td>${t.weight ? `<span class="tag">${t.weight}</span> `:""}${vophEsc(t.desc)}</td>
+      <td class="popis-cell">
+        <div class="popis-display" onclick="vophOpenPopisEditor(this,'${t.id}')">
+          ${t.weight ? `<span class="tag">${t.weight}</span> `:""}${vophEsc(t.desc)}
+        </div>
+        ${vophAttachmentsHtml(t)}
+        ${vophCommentsHtml(t)}
+      </td>
       <td>${vophWhoDisplay(t)}</td>
       <td class="editable-cell" onclick="vophOpenMultiEditor(this,'${t.id}','block')">
         <div class="tag-list">${toArr(t.block).map(b=>`<span class="tag">${SECTION_LABELS[b]||b}</span>`).join("")}</div>
@@ -674,6 +696,52 @@ async function vophSubmitTerminChange(inputEl, id){
 }
 
 /* ============================================================
+   EDITOVATELNÝ POPIS ÚKOLU
+============================================================ */
+function vophOpenPopisEditor(displayEl, id){
+  if(displayEl.parentElement.querySelector(".popis-editor")) return;
+  const t = openTasks.find(x => x.id === id);
+  if(!t) return;
+  displayEl.outerHTML = `
+    <div class="popis-editor" onclick="event.stopPropagation()">
+      <textarea class="popis-textarea">${vophEsc(t.desc)}</textarea>
+      <div class="editor-actions">
+        <button class="ok" onclick="vophApplyPopisEdit('${id}', this)">✓ Uložit</button>
+        <button onclick="vophRenderTaskTable()">✕ Zrušit</button>
+      </div>
+    </div>`;
+}
+
+async function vophApplyPopisEdit(id, btnEl){
+  const editor = btnEl.closest(".popis-editor");
+  const newDesc = editor.querySelector(".popis-textarea").value.trim();
+  if(!newDesc){ alert("Popis nesmí být prázdný."); return; }
+  const t = openTasks.find(x => x.id === id);
+  if(t) t.desc = newDesc;
+  vophRenderTaskTable();
+  const ok = await vophPushInboxItem({ action:"update", id, desc:newDesc, ts:new Date().toISOString() });
+  document.getElementById("syncStatus").textContent = ok
+    ? `Popis ${id} upraven.` : `Úprava popisu ${id} se nepodařila odeslat.`;
+}
+
+/* ============================================================
+   HISTORIE KOMENTÁŘŮ — zobrazí VŠECHNY komentáře k úkolu, ne jen poslední
+============================================================ */
+function vophGetComments(t){
+  if(Array.isArray(t.comments)) return t.comments;
+  if(t.comment) return [{ text: t.comment, by: t.completed_by || t.handed_off_by || "", at: t.updated || t.completed_at || "" }];
+  return [];
+}
+
+function vophCommentsHtml(t){
+  const comments = vophGetComments(t);
+  if(!comments.length) return "";
+  return `<div class="comments-list">${comments.map(c => `
+    <div class="comment-line">💬 ${vophEsc(c.text)}<span class="comment-meta"> — ${vophEsc(c.by||"?")}${c.at ? ", "+vophEsc(String(c.at).slice(0,10)) : ""}</span></div>
+  `).join("")}</div>`;
+}
+
+/* ============================================================
    AKCE BUŇKA — Komentář + Hotovo / Předat / Kontrola
 ============================================================ */
 const vophDraftComments = {};
@@ -684,7 +752,6 @@ function vophAkceCellHtml(t){
   const hasText = draft.trim().length > 0;
   return `
     <div class="akce-cell" data-id="${t.id}">
-      ${vophAttachmentsHtml(t)}
       <input type="text" class="komentar-input" placeholder="Komentář (povinné)"
              value="${draft}" oninput="vophOnKomentarInput(this,'${t.id}')">
       <div class="akce-buttons" id="akceButtons-${t.id}">
@@ -895,8 +962,10 @@ async function vophSubmitCompletion(id, comment){
   const task = openTasks.find(t => t.id === id);
   const who = vophWhoAmI();
   const completedBy = (who && who !== "Všichni") ? who : (task ? task.who : "Nam");
-  const ok = await vophPushInboxItem({ action:"complete", id, completed_by: completedBy, comment,
-                     source:"dashboard", ts:new Date().toISOString() });
+  const ts = new Date().toISOString();
+  const comments = (task ? vophGetComments(task) : []).concat([{ text: comment, by: completedBy, at: ts }]);
+  const ok = await vophPushInboxItem({ action:"complete", id, completed_by: completedBy, comments,
+                     source:"dashboard", ts });
   document.getElementById("syncStatus").textContent = ok
     ? `Splnění ${id} zapsáno do fronty.` : `Odeslání splnění ${id} selhalo.`;
 }
@@ -954,10 +1023,12 @@ async function vophConfirmHandoff(id, btnEl){
 async function vophSubmitReassign(id, peopleArr, comment, isHandoff){
   const t = openTasks.find(x => x.id === id);
   const handedOffBy = (vophWhoAmI() !== "Všichni") ? vophWhoAmI() : (t ? t.who : null);
-  if(t){ t.who = peopleArr; t.block = ["next"]; }
+  const commentAuthor = handedOffBy || peopleArr[0];
+  const ts = new Date().toISOString();
+  const comments = (t ? vophGetComments(t) : []).concat([{ text: comment, by: commentAuthor, at: ts }]);
+  if(t){ t.who = peopleArr; t.block = ["next"]; t.comments = comments; }
   vophRenderTaskTable();
-  const payload = { action:"update", id, who: peopleArr, block:["next"], comment,
-                     ts:new Date().toISOString() };
+  const payload = { action:"update", id, who: peopleArr, block:["next"], comments, ts };
   if(isHandoff) payload.handed_off_by = handedOffBy;
   const ok = await vophPushInboxItem(payload);
   document.getElementById("syncStatus").textContent = ok
@@ -1025,9 +1096,9 @@ function vophRenderDoneTable(){
   document.getElementById("doneBody").innerHTML = rows.length ? rows.map(t => `
     <tr>
       <td>${t.weight ? `<span class="tag done">${t.weight}</span> `:""}${vophEsc(t.desc)}
-        ${t.comment ? `<div style="font-size:11.5px; color:var(--muted); margin-top:3px;">💬 ${vophEsc(t.comment)}</div>` : ""}
         ${(t.attachments && t.attachments.length) ? `<div class="attach-row" style="margin-top:4px;">${t.attachments.map(a =>
-          `<span class="attachment-chip" onclick="vophDownloadAttachment('${vophEscJs(a.path)}','${vophEscJs(a.name)}')" title="${vophEsc(a.name)}">📎 <span class="fname">${vophEsc(a.name)}</span></span>`).join("")}</div>` : ""}</td>
+          `<span class="attachment-chip" onclick="vophDownloadAttachment('${vophEscJs(a.path)}','${vophEscJs(a.name)}')" title="${vophEsc(a.name)}">📎 <span class="fname">${vophEsc(a.name)}</span></span>`).join("")}</div>` : ""}
+        ${vophCommentsHtml(t)}</td>
       <td>${vophWhoDisplay(t)}</td>
       <td>${toArr(t.block).map(b=>SECTION_LABELS[b]||b).join(", ") || "—"}</td>
       <td>${toArr(t.domain).join(", ") || "—"}</td>
