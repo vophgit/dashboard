@@ -87,8 +87,16 @@
   .table-scroll table.data{border:none;}
 
   .done-btn{font:inherit; font-size:12px; padding:5px 10px; border-radius:6px; border:1px solid var(--line); background:#fff; color:var(--slate); cursor:pointer; white-space:nowrap;}
+  .done-btn:disabled{opacity:.45; cursor:not-allowed;}
   .done-btn.confirm{background:var(--red); border-color:var(--red); color:#fff; font-weight:600;}
   .done-btn.sent{background:var(--green-soft); border-color:#B9DDC5; color:var(--green); cursor:default;}
+
+  .komentar-cell{display:flex; gap:6px; align-items:center; min-width:230px;}
+  .komentar-input{
+    flex:1; min-width:0; font:inherit; font-size:12.5px; padding:6px 8px;
+    border-radius:6px; border:1px solid var(--line); background:#fff; color:var(--ink);
+  }
+  .komentar-input:disabled{background:#F2F4F5; color:var(--muted);}
 
   .checklist{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px;}
   .checklist li{font-size:13px; color:var(--muted); display:flex; gap:8px;}
@@ -226,7 +234,7 @@
     <div class="count-badge" id="taskCount"></div>
     <div class="table-scroll">
       <table class="data">
-        <thead><tr><th></th><th>Úkol</th><th>Kdo</th><th>Sekce</th><th>Doména</th><th>Datum</th></tr></thead>
+        <thead><tr><th>Úkol</th><th>Kdo</th><th>Sekce</th><th>Doména</th><th>Datum</th><th>Komentář / Hotovo</th></tr></thead>
         <tbody id="taskBody"><tr><td colspan="6">Načítám…</td></tr></tbody>
       </table>
     </div>
@@ -617,22 +625,47 @@ function vophRenderTaskTable(){
   document.getElementById("taskCount").textContent = `${rows.length} položek`;
   document.getElementById("taskBody").innerHTML = rows.length ? rows.map(t => `
     <tr data-id="${t.id}">
-      <td>${vophDoneButtonHtml(t)}</td>
-      <td>${t.weight ? `<span class="tag">${t.weight}</span> `:""}${vophEsc(t.desc)}</td>
+      <td>${vophEsc(t.desc)}${t.weight ? ` <span class="tag">${t.weight}</span>`:""}</td>
       <td>${t.who}</td>
       <td>${SECTION_LABELS[t.block]||t.block}</td>
       <td>${t.domain}</td>
       <td class="date-cell">${t.due ? t.due+" ⏰" : (t.created||"")}</td>
+      <td>${vophKomentarCellHtml(t)}</td>
     </tr>`).join("") : `<tr><td colspan="6" style="color:var(--muted)">Žádné položky pro vybraný filtr.</td></tr>`;
 }
 
-function vophDoneButtonHtml(t){
-  return `<button class="done-btn" data-state="idle" onclick="vophHandleDoneClick(this,'${t.id}')">Hotovo</button>`;
+/* Komentář je POVINNÝ — tlačítko Hotovo je uzamčené, dokud pole není vyplněné */
+const vophDraftComments = {};
+function vophKomentarCellHtml(t){
+  const draft = vophEsc(vophDraftComments[t.id] || "");
+  return `
+    <div class="komentar-cell">
+      <input type="text" class="komentar-input" placeholder="Komentář (povinné)"
+             value="${draft}" oninput="vophOnKomentarInput(this,'${t.id}')">
+      <button class="done-btn" data-state="idle" ${draft.trim() ? "" : "disabled"}
+              onclick="vophHandleDoneClick(this,'${t.id}')">Hotovo</button>
+    </div>`;
+}
+
+function vophOnKomentarInput(input, id){
+  vophDraftComments[id] = input.value;
+  const btn = input.nextElementSibling;
+  const hasText = input.value.trim().length > 0;
+  btn.disabled = !hasText;
+  if(!hasText && btn.dataset.state === "confirm"){
+    // Smazal komentář uprostřed potvrzování — vrátit tlačítko do klidového stavu
+    btn.dataset.state = "idle";
+    btn.textContent = "Hotovo";
+    btn.classList.remove("confirm");
+  }
 }
 
 /* Dvojklik s potvrzením — chrání proti omylem kliknutí */
 const vophPendingConfirm = {};
 function vophHandleDoneClick(btn, id){
+  const input = btn.previousElementSibling;
+  if(!input.value.trim()) return; // pojistka navíc, i když by disabled mělo stačit
+
   const state = btn.dataset.state;
   if(state === "idle"){
     btn.dataset.state = "confirm";
@@ -653,15 +686,18 @@ function vophHandleDoneClick(btn, id){
     btn.classList.remove("confirm");
     btn.classList.add("sent");
     btn.disabled = true;
-    vophSubmitCompletion(id);
+    input.disabled = true;
+    vophSubmitCompletion(id, input.value.trim());
+    delete vophDraftComments[id];
   }
 }
 
-async function vophSubmitCompletion(id){
+async function vophSubmitCompletion(id, comment){
   const task = openTasks.find(t => t.id === id);
   const who = vophWhoAmI();
   const completedBy = (who && who !== "Všichni") ? who : (task ? task.who : "Nam");
-  const payload = { action:"complete", id, completed_by: completedBy, source:"dashboard", ts:new Date().toISOString() };
+  const payload = { action:"complete", id, completed_by: completedBy, comment,
+                     source:"dashboard", ts:new Date().toISOString() };
   const ok = await vophPushInboxItem(payload);
   document.getElementById("syncStatus").textContent = ok
     ? `Splnění ${id} zapsáno do fronty — projeví se po syncu.`
@@ -692,7 +728,8 @@ function vophRenderDoneTable(){
   document.getElementById("doneCount").textContent = `${rows.length} položek`;
   document.getElementById("doneBody").innerHTML = rows.length ? rows.map(t => `
     <tr>
-      <td>${t.weight ? `<span class="tag done">${t.weight}</span> `:""}${vophEsc(t.desc)}</td>
+      <td>${t.weight ? `<span class="tag done">${t.weight}</span> `:""}${vophEsc(t.desc)}
+        ${t.comment ? `<div style="font-size:11.5px; color:var(--muted); margin-top:3px;">💬 ${vophEsc(t.comment)}</div>` : ""}</td>
       <td>${t.who}</td>
       <td>${t.block ? (SECTION_LABELS[t.block]||t.block) : "—"}</td>
       <td>${t.domain}</td>
