@@ -122,6 +122,21 @@
   .akce-buttons button:disabled{opacity:.4; cursor:not-allowed;}
   .akce-buttons button.confirm{background:var(--red); border-color:var(--red); color:#fff; font-weight:600;}
   .akce-buttons button.sent{background:var(--green-soft); border-color:#B9DDC5; color:var(--green); cursor:default;}
+
+  .attach-row{display:flex; align-items:center; gap:6px; margin-bottom:5px; flex-wrap:wrap;}
+  .attach-btn{
+    font:inherit; font-size:11px; padding:4px 8px; border-radius:6px; border:1px dashed var(--line);
+    background:#fff; color:var(--muted); cursor:pointer; white-space:nowrap;
+  }
+  .attach-btn:hover{border-color:var(--brand); color:var(--brand-dark);}
+  .attach-btn.uploading{opacity:.6; cursor:wait;}
+  .attachment-chip{
+    display:inline-flex; align-items:center; gap:4px; font-size:11px; padding:3px 7px;
+    border-radius:5px; background:var(--brand-soft); color:var(--brand-dark); cursor:pointer; max-width:150px;
+  }
+  .attachment-chip .fname{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100px;}
+  .attachment-chip .rm{color:var(--red); font-weight:700; cursor:pointer; padding:0 2px;}
+  .attachment-chip .rm:hover{text-decoration:underline;}
   .handoff-picker{background:#fff; border:1px solid var(--brand); border-radius:6px; padding:8px; font-size:12px;}
   .handoff-picker label{display:flex; align-items:center; gap:5px; padding:2px 0;}
   .handoff-picker .editor-actions{display:flex; gap:6px; margin-top:6px;}
@@ -669,6 +684,7 @@ function vophAkceCellHtml(t){
   const hasText = draft.trim().length > 0;
   return `
     <div class="akce-cell" data-id="${t.id}">
+      ${vophAttachmentsHtml(t)}
       <input type="text" class="komentar-input" placeholder="Komentář (povinné)"
              value="${draft}" oninput="vophOnKomentarInput(this,'${t.id}')">
       <div class="akce-buttons" id="akceButtons-${t.id}">
@@ -680,6 +696,157 @@ function vophAkceCellHtml(t){
                 onclick="vophHandleKontrolaClick(this,'${t.id}')">Kontrola</button>
       </div>
     </div>`;
+}
+
+/* ============================================================
+   PŘÍLOHY — nahrávají se přímo do repa voph-tasks (attachments/<id>/...)
+============================================================ */
+function vophAttachmentsHtml(t){
+  const list = t.attachments || [];
+  const chips = list.map(a => `
+    <span class="attachment-chip" onclick="vophDownloadAttachment('${vophEscJs(a.path)}','${vophEscJs(a.name)}')" title="${vophEsc(a.name)} (${vophFormatSize(a.size)})">
+      📎 <span class="fname">${vophEsc(a.name)}</span>
+      <span class="rm" onclick="event.stopPropagation(); vophRemoveAttachment('${t.id}','${a.path}')" title="Odebrat přílohu">✕</span>
+    </span>`).join("");
+  return `
+    <div class="attach-row">
+      ${chips}
+      <label class="attach-btn" id="attachBtn-${t.id}">
+        📎 Přidat soubor
+        <input type="file" style="display:none" onchange="vophHandleFileSelect(this,'${t.id}')">
+      </label>
+    </div>`;
+}
+
+function vophFormatSize(bytes){
+  if(!bytes) return "0 B";
+  if(bytes < 1024) return bytes + " B";
+  if(bytes < 1024*1024) return (bytes/1024).toFixed(1) + " KB";
+  return (bytes/1024/1024).toFixed(1) + " MB";
+}
+
+function vophSanitizeFilename(name){
+  return name.trim().replace(/[^\w.\-]+/g, "_");
+}
+
+async function vophHandleFileSelect(input, id){
+  const file = input.files[0];
+  if(!file) return;
+  const MAX_SIZE = 8 * 1024 * 1024; // 8 MB — bezpečná hranice pro Contents API
+  if(file.size > MAX_SIZE){
+    alert(`Soubor je příliš velký (${vophFormatSize(file.size)}). Limit je 8 MB.`);
+    input.value = "";
+    return;
+  }
+  const token = vophToken();
+  if(!token){ vophNeedToken("Nejdřív vlož token."); return; }
+
+  const btn = document.getElementById("attachBtn-"+id);
+  btn.classList.add("uploading");
+  btn.firstChild.textContent = " Nahrávám…";
+  let needsManualReset = true; // úspěch dělá reset přes vophRenderTaskTable(); jinak obnovíme ručně ve finally
+
+  try{
+    const b64 = await vophFileToBase64(file);
+    const safeName = vophSanitizeFilename(file.name);
+    const uniquePrefix = Date.now().toString(36);
+    const path = `attachments/${id}/${uniquePrefix}-${safeName}`;
+    const who = vophWhoAmI();
+    const uploadedBy = (who && who !== "Všichni") ? who : "Nam";
+
+    const res = await fetch(`https://api.github.com/repos/${VOPH_OWNER}/${VOPH_REPO}/contents/${path}`, {
+      method:"PUT",
+      headers:{ "Authorization":"Bearer "+token, "Accept":"application/vnd.github+json" },
+      body: JSON.stringify({ message:`dashboard: příloha k ${id} (${safeName})`, content:b64 })
+    });
+
+    if(res.status===401 || res.status===403){
+      localStorage.removeItem("voph_gh_token");
+      vophNeedToken("Token neplatí nebo vypršel — vlož nový.");
+      return;
+    }
+    if(!res.ok){
+      alert("Nahrání přílohy selhalo — zkus to znovu.");
+      return;
+    }
+
+    const t = openTasks.find(x => x.id === id);
+    const newAttachment = { name: file.name, path, size: file.size,
+                             uploaded_at: new Date().toISOString(), uploaded_by: uploadedBy };
+    const attachments = (t && t.attachments ? t.attachments : []).concat([newAttachment]);
+    if(t) t.attachments = attachments;
+    vophRenderTaskTable();
+    needsManualReset = false; // tlačítko už neexistuje ve staré podobě, bylo nahrazeno čerstvým vykreslením
+
+    const ok = await vophPushInboxItem({ action:"update", id, attachments, ts:new Date().toISOString() });
+    document.getElementById("syncStatus").textContent = ok
+      ? `Příloha "${file.name}" nahrána k ${id}.`
+      : `Příloha nahrána, ale zápis do task-all se nezdařil — zkus sync ručně.`;
+  } catch(e){
+    alert("Nahrání přílohy selhalo — zkus to znovu.");
+  } finally {
+    input.value = "";
+    if(needsManualReset && btn && btn.isConnected){
+      btn.classList.remove("uploading");
+      btn.firstChild.textContent = "📎 Přidat soubor";
+    }
+  }
+}
+
+function vophFileToBase64(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function vophDownloadAttachment(path, name){
+  const token = vophToken();
+  if(!token){ vophNeedToken("Nejdřív vlož token."); return; }
+  try{
+    const res = await fetch(`https://api.github.com/repos/${VOPH_OWNER}/${VOPH_REPO}/contents/${path}`, {
+      headers:{ "Authorization":"Bearer "+token, "Accept":"application/vnd.github.raw+json" }
+    });
+    if(!res.ok){ alert("Nepodařilo se načíst přílohu."); return; }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }catch(e){
+    alert("Stažení přílohy selhalo.");
+  }
+}
+
+async function vophRemoveAttachment(id, path){
+  if(!confirm("Odebrat tuto přílohu z úkolu?")) return;
+  const t = openTasks.find(x => x.id === id);
+  const attachments = (t && t.attachments ? t.attachments : []).filter(a => a.path !== path);
+  if(t) t.attachments = attachments;
+  vophRenderTaskTable();
+
+  const token = vophToken();
+  if(token){
+    try{
+      const meta = await fetch(`https://api.github.com/repos/${VOPH_OWNER}/${VOPH_REPO}/contents/${path}`,
+        { headers:{ "Authorization":"Bearer "+token, "Accept":"application/vnd.github+json" } });
+      if(meta.ok){
+        const metaJson = await meta.json();
+        await fetch(`https://api.github.com/repos/${VOPH_OWNER}/${VOPH_REPO}/contents/${path}`, {
+          method:"DELETE",
+          headers:{ "Authorization":"Bearer "+token, "Accept":"application/vnd.github+json" },
+          body: JSON.stringify({ message:`dashboard: odebrání přílohy ${id}`, sha: metaJson.sha })
+        });
+      }
+    }catch(e){ /* soubor v repu zůstane osiřelý, není kritické */ }
+  }
+
+  const ok = await vophPushInboxItem({ action:"update", id, attachments, ts:new Date().toISOString() });
+  document.getElementById("syncStatus").textContent = ok
+    ? `Příloha odebrána z ${id}.` : `Odebrání se nepodařilo zapsat — zkus sync ručně.`;
 }
 
 function vophOnKomentarInput(input, id){
@@ -826,6 +993,10 @@ async function vophPushInboxItem(payload){
 function vophEsc(s){
   const d = document.createElement("div"); d.textContent = s||""; return d.innerHTML;
 }
+/* Escapování pro vložení do onclick="...('...')" — chrání proti apostrofu v názvu souboru */
+function vophEscJs(s){
+  return String(s||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+}
 
 /* ---------- Hotovo podle osoby (bez filtrů) ---------- */
 function vophRenderDoneByPerson(){
@@ -854,7 +1025,9 @@ function vophRenderDoneTable(){
   document.getElementById("doneBody").innerHTML = rows.length ? rows.map(t => `
     <tr>
       <td>${t.weight ? `<span class="tag done">${t.weight}</span> `:""}${vophEsc(t.desc)}
-        ${t.comment ? `<div style="font-size:11.5px; color:var(--muted); margin-top:3px;">💬 ${vophEsc(t.comment)}</div>` : ""}</td>
+        ${t.comment ? `<div style="font-size:11.5px; color:var(--muted); margin-top:3px;">💬 ${vophEsc(t.comment)}</div>` : ""}
+        ${(t.attachments && t.attachments.length) ? `<div class="attach-row" style="margin-top:4px;">${t.attachments.map(a =>
+          `<span class="attachment-chip" onclick="vophDownloadAttachment('${vophEscJs(a.path)}','${vophEscJs(a.name)}')" title="${vophEsc(a.name)}">📎 <span class="fname">${vophEsc(a.name)}</span></span>`).join("")}</div>` : ""}</td>
       <td>${vophWhoDisplay(t)}</td>
       <td>${toArr(t.block).map(b=>SECTION_LABELS[b]||b).join(", ") || "—"}</td>
       <td>${toArr(t.domain).join(", ") || "—"}</td>
