@@ -8,148 +8,152 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --ink:#1B2430; --navy:#233248; --slate:#3E5C76; --slate-soft:#EAF0F4;
-    --amber:#B5792A; --amber-soft:#FBF0DE; --red:#A8402F; --red-soft:#FBEAE6;
-    --green:#3F7856; --green-soft:#E9F3ED; --paper:#F3F5F4; --card:#FFFFFF;
-    --line:#DBE1E4; --muted:#647084; --radius:10px;
+    /* Značka VOPH — oficiální oranžová (meta-theme-color na voph.cz) */
+    --brand:#F16726; --brand-dark:#B8490F; --brand-soft:#FDE7D8; --brand-softer:#FEF4EE;
+    --ink:#1B2430; --navy:#233248; --muted:#647084; --line:#DBE1E4;
+    --red:#A8402F; --red-soft:#FBEAE6;
+    --green:#3F7856; --green-soft:#E9F3ED;
+    --amber:#B5792A; --amber-soft:#FBF0DE;
+    --paper:#F3F5F4; --card:#FFFFFF; --radius:10px;
   }
   *{box-sizing:border-box;}
   body{margin:0; background:var(--paper); color:var(--ink); font-family:'Inter',system-ui,sans-serif; font-size:14px; line-height:1.5;}
-  h1,h2,h3{font-family:'Space Grotesk',sans-serif; margin:0; color:var(--navy);}
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif; margin:0; color:var(--brand-dark);}
   code, .mono{font-family:'JetBrains Mono',monospace;}
-  a{color:var(--slate);}
+  a{color:var(--brand-dark);}
 
-  header.top{background:var(--navy); color:#fff; padding:22px clamp(16px,4vw,40px);}
+  header.top{background:var(--brand); color:#fff; padding:22px clamp(16px,4vw,40px);}
   header.top h1{color:#fff; font-size:20px; letter-spacing:.2px;}
-  header.top .sub{color:#B8C4D2; font-size:12.5px; margin-top:4px;}
-  .wrap{max-width:1180px; margin:0 auto; padding:0 clamp(16px,4vw,40px);}
+  header.top .sub{color:#FFE3D1; font-size:12.5px; margin-top:4px;}
+  .head-row{display:flex; align-items:flex-start; justify-content:space-between; gap:16px;}
+  .head-logo{height:38px; flex-shrink:0;}
+  .wrap{max-width:1280px; margin:0 auto; padding:0 clamp(16px,4vw,40px);}
 
   .toolbar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:18px;}
-  .toolbar select, .toolbar button, .toolbar input{
-    font:inherit; padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,.25);
-    background:rgba(255,255,255,.08); color:#fff;
+  .toolbar select, .toolbar button{
+    font:inherit; padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,.35);
+    background:rgba(255,255,255,.14); color:#fff;
   }
   .toolbar select option{color:#111;}
-  .btn-sync{background:var(--slate); border:none; color:#fff; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px;}
-  .btn-sync:hover{filter:brightness(1.08);}
+  .btn-sync{background:#fff; border:none; color:var(--brand-dark); font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px;}
+  .btn-sync:hover{filter:brightness(.97);}
   .btn-sync:disabled{opacity:.6; cursor:default;}
-  .who-label{color:#B8C4D2; font-size:12.5px;}
-  .sync-status{font-size:12px; color:#B8C4D2; margin-top:6px;}
+  .who-label{color:#FFE3D1; font-size:12.5px;}
+  .sync-status{font-size:12px; color:#FFE3D1; margin-top:6px;}
 
-  section{margin-top:30px;}
-  .grid-stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px;}
-  .stat{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px;}
-  .stat .num{font-family:'Space Grotesk'; font-size:26px; color:var(--navy); font-weight:700;}
-  .stat .lbl{font-size:12px; color:var(--muted); margin-top:2px;}
-
-  .callouts{display:flex; flex-direction:column; gap:8px; margin-top:16px;}
-  .callout{border-radius:var(--radius); padding:10px 14px; font-size:13px; display:flex; gap:8px;}
-  .callout b{white-space:nowrap;}
-  .callout.priority{background:var(--slate-soft); color:var(--navy); border:1px solid #C7D6E2;}
-  .callout.urgent{background:var(--red-soft); color:var(--red); border:1px solid #EBC9C2;}
-  .callout.termin{background:var(--green-soft); color:var(--green); border:1px solid #C3E1CF;}
-  .callout.overdue{background:var(--amber-soft); color:var(--amber); border:1px solid #ECD6AE;}
-  .callouts-empty{font-size:12.5px; color:var(--muted); padding:6px 2px;}
+  #tokenBox{background:var(--amber-soft); border:1px solid #ECD6AE; border-radius:var(--radius); padding:14px 16px; margin-top:16px; display:none;}
+  #tokenBox input{font:inherit; padding:7px 10px; border-radius:6px; border:1px solid var(--line); width:280px;}
+  #tokenBox button{font:inherit; padding:7px 14px; border-radius:6px; border:none; background:var(--brand); color:#fff; cursor:pointer;}
 
   /* Layout: floating sidebar (levý sloupec) + hlavní obsah */
   .layout{display:flex; align-items:flex-start; gap:20px; margin-top:20px;}
-  .sidebar{flex:0 0 250px; width:250px; position:sticky; top:16px; display:flex; flex-direction:column; gap:16px;}
+  .sidebar{flex:0 0 250px; width:250px; position:sticky; top:16px; display:flex; flex-direction:column; gap:14px;}
   .main-col{flex:1; min-width:0;}
-  .side-panel{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px;}
-  .side-panel h3{font-size:13px; margin-bottom:8px; color:var(--navy);}
+  .side-panel{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;}
+  .side-panel h3{font-size:12.5px; margin:0; padding:9px 12px; background:var(--brand-soft); color:var(--brand-dark);}
+  .side-panel .side-body{padding:10px 12px;}
+  .side-empty{font-size:12px; color:var(--muted);}
+  .alert-row{font-size:12.5px; padding:5px 0; border-top:1px solid var(--line);}
+  .alert-row:first-child{border-top:none;}
+  .alert-row b{display:block; font-size:11px; text-transform:uppercase; letter-spacing:.03em;}
+  .alert-row.urgent b{color:var(--red);} .alert-row.urgent{color:var(--red);}
+  .alert-row.termin b{color:var(--green);} .alert-row.termin{color:var(--ink);}
+  .alert-row.overdue b{color:var(--amber);} .alert-row.overdue{color:var(--ink);}
+  .alert-row.priority b{color:var(--brand-dark);} .alert-row.priority{color:var(--ink);}
   @media (max-width:860px){
     .layout{flex-direction:column;}
     .sidebar{position:static; width:100%; flex-direction:row; flex-wrap:wrap;}
-    .side-panel{flex:1 1 260px;}
+    .side-panel{flex:1 1 240px;}
   }
-  .mini-table{width:100%; border-collapse:collapse; background:var(--card); border-radius:var(--radius); overflow:hidden;}
-  .mini-table th{background:var(--slate-soft); text-align:left; padding:7px 10px; font-size:11.5px; color:var(--navy);}
+  .mini-table{width:100%; border-collapse:collapse;}
+  .mini-table th{background:var(--brand-soft); color:var(--brand-dark); text-align:left; padding:7px 10px; font-size:11.5px;}
   .mini-table td{padding:6px 10px; border-top:1px solid var(--line); font-size:12.5px;}
-  .mini-table td.n{text-align:right; font-family:'JetBrains Mono'; color:var(--slate);}
+  .mini-table td.n{text-align:right; font-family:'JetBrains Mono'; color:var(--brand-dark);}
 
-  .panel{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:18px;}
-  .panel h2{font-size:16px; margin-bottom:4px;}
-  .panel .desc{font-size:12.5px; color:var(--muted); margin-bottom:12px;}
+  section{margin-top:26px;}
+  .grid-stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px;}
+  .stat{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px;}
+  .stat .num{font-family:'Space Grotesk'; font-size:26px; color:var(--brand-dark); font-weight:700;}
+  .stat .lbl{font-size:12px; color:var(--muted); margin-top:2px;}
+
+  .panel{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;}
+  .panel-head{background:var(--brand-soft); padding:12px 18px;}
+  .panel-head h2{font-size:16px; color:var(--brand-dark);}
+  .panel-head .desc{font-size:12.5px; color:var(--muted); margin-top:2px;}
+  .panel-body{padding:16px 18px;}
 
   .filters{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;}
   .filters select{font:inherit; padding:7px 10px; border-radius:8px; border:1px solid var(--line); background:#fff; color:var(--ink); font-size:12.5px;}
   .count-badge{font-size:12px; color:var(--muted); margin-bottom:8px;}
 
   table.data{width:100%; border-collapse:collapse; font-size:13px;}
-  table.data th{text-align:left; padding:9px 10px; border-bottom:2px solid var(--line); color:var(--muted); font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:.03em; position:sticky; top:0; background:var(--card);}
+  table.data th{text-align:left; padding:9px 10px; background:var(--brand-soft); color:var(--brand-dark); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.03em; position:sticky; top:0;}
   table.data td{padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:top;}
-  table.data tr:hover td{background:#FAFBFC;}
-  .tag{display:inline-block; padding:2px 7px; border-radius:5px; font-size:11px; font-weight:600; background:var(--slate-soft); color:var(--slate);}
+  table.data tr:hover td{background:var(--brand-softer);}
+  .tag{display:inline-block; padding:2px 7px; border-radius:5px; font-size:11px; font-weight:600; background:var(--brand-soft); color:var(--brand-dark); margin:1px 2px 1px 0;}
   .tag.done{background:var(--green-soft); color:var(--green);}
   .date-cell{font-family:'JetBrains Mono'; color:var(--muted); font-size:12px; white-space:nowrap;}
-  .table-scroll{max-height:560px; overflow:auto; border:1px solid var(--line); border-radius:var(--radius);}
-  table.data th, table.data td{border-left:none; border-right:none;}
-  .table-scroll table.data{border:none;}
+  .table-scroll{max-height:600px; overflow:auto; border:1px solid var(--line); border-radius:var(--radius);}
+  table.data{border:none;}
 
-  .done-btn{font:inherit; font-size:12px; padding:5px 10px; border-radius:6px; border:1px solid var(--line); background:#fff; color:var(--slate); cursor:pointer; white-space:nowrap;}
-  .done-btn:disabled{opacity:.45; cursor:not-allowed;}
-  .done-btn.confirm{background:var(--red); border-color:var(--red); color:#fff; font-weight:600;}
-  .done-btn.sent{background:var(--green-soft); border-color:#B9DDC5; color:var(--green); cursor:default;}
+  /* Editovatelné buňky Sekce / Doména / Termín */
+  .editable-cell{cursor:pointer; min-width:120px;}
+  .editable-cell:hover{background:var(--brand-softer);}
+  .editable-cell .tag-list:empty::after{content:"— klikni pro výběr —"; color:var(--muted); font-size:11.5px; font-style:italic;}
+  .cell-editor{background:#fff; border:1px solid var(--brand); border-radius:6px; padding:6px; font-size:12px; min-width:170px;}
+  .cell-editor label{display:flex; align-items:center; gap:5px; padding:2px 0; white-space:nowrap;}
+  .cell-editor .editor-actions{display:flex; gap:6px; margin-top:6px;}
+  .cell-editor .editor-actions button{font:inherit; font-size:11.5px; padding:4px 9px; border-radius:5px; border:1px solid var(--line); background:#fff; cursor:pointer;}
+  .cell-editor .editor-actions button.ok{background:var(--brand); border-color:var(--brand); color:#fff; font-weight:600;}
+  .termin-display{text-decoration:underline dotted var(--muted); text-underline-offset:2px;}
+  .termin-cell input[type=date]{font:inherit; font-size:12.5px; padding:3px 5px; border-radius:5px; border:1px solid var(--brand);}
 
-  .komentar-cell{display:flex; gap:6px; align-items:center; min-width:230px;}
+  /* Akce buňka: komentář + Hotovo/Předat/Kontrola */
+  .akce-cell{min-width:230px;}
   .komentar-input{
-    flex:1; min-width:0; font:inherit; font-size:12.5px; padding:6px 8px;
+    width:100%; font:inherit; font-size:12.5px; padding:6px 8px; margin-bottom:5px;
     border-radius:6px; border:1px solid var(--line); background:#fff; color:var(--ink);
   }
   .komentar-input:disabled{background:#F2F4F5; color:var(--muted);}
+  .akce-buttons{display:flex; gap:5px; flex-wrap:wrap;}
+  .akce-buttons button{font:inherit; font-size:11.5px; padding:5px 9px; border-radius:6px; border:1px solid var(--line); background:#fff; color:var(--brand-dark); cursor:pointer; white-space:nowrap;}
+  .akce-buttons button:disabled{opacity:.4; cursor:not-allowed;}
+  .akce-buttons button.confirm{background:var(--red); border-color:var(--red); color:#fff; font-weight:600;}
+  .akce-buttons button.sent{background:var(--green-soft); border-color:#B9DDC5; color:var(--green); cursor:default;}
+  .handoff-picker{background:#fff; border:1px solid var(--brand); border-radius:6px; padding:8px; font-size:12px;}
+  .handoff-picker label{display:flex; align-items:center; gap:5px; padding:2px 0;}
+  .handoff-picker .editor-actions{display:flex; gap:6px; margin-top:6px;}
+  .handoff-picker .editor-actions button{font:inherit; font-size:11.5px; padding:4px 9px; border-radius:5px; border:1px solid var(--line); background:#fff; cursor:pointer;}
+  .handoff-picker .editor-actions button.ok{background:var(--brand); border-color:var(--brand); color:#fff; font-weight:600;}
+
+  /* Řádek pro přidání nového úkolu — první řádek tabulky Úkol, stejný vzhled jako ostatní */
+  tr.add-row td{background:var(--brand-softer); vertical-align:middle;}
+  tr.add-row input[type=text], tr.add-row input[type=date], tr.add-row select{
+    font:inherit; font-size:12.5px; padding:6px 8px; border-radius:6px; border:1px solid var(--line); width:100%;
+  }
+  tr.add-row .add-desc{min-width:160px;}
+  .add-submit{font:inherit; font-size:12px; padding:6px 12px; border-radius:6px; border:none; background:var(--brand); color:#fff; font-weight:700; cursor:pointer; white-space:nowrap;}
+  .add-submit:disabled{opacity:.5; cursor:not-allowed;}
+  .add-status{font-size:11px; color:var(--muted); margin-top:4px;}
 
   .checklist{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px;}
   .checklist li{font-size:13px; color:var(--muted); display:flex; gap:8px;}
-  .checklist li::before{content:"☐"; color:var(--slate);}
+  .checklist li::before{content:"☐"; color:var(--brand);}
 
   footer{margin:40px 0 30px; text-align:center; font-size:12px; color:var(--muted);}
-
-  #tokenBox{background:var(--amber-soft); border:1px solid #ECD6AE; border-radius:var(--radius); padding:14px 16px; margin-top:16px; display:none;}
-  #tokenBox input{font:inherit; padding:7px 10px; border-radius:6px; border:1px solid var(--line); width:280px;}
-  #tokenBox button{font:inherit; padding:7px 14px; border-radius:6px; border:none; background:var(--navy); color:#fff; cursor:pointer;}
-
-  /* Floating panel vpravo — přidání úkolu přímo z dashboardu (přesouvatelný, měnitelná velikost) */
-  .float-add{
-    position:fixed; top:110px; right:20px; width:290px; z-index:60;
-    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
-    box-shadow:0 6px 24px rgba(27,36,48,.14); max-height:calc(100vh - 40px); overflow:auto;
-    resize:both; min-width:240px; min-height:170px;
-  }
-  .float-add.collapsed{resize:none; overflow:hidden;}
-  .float-add-head{
-    display:flex; align-items:center; justify-content:space-between; gap:8px;
-    padding:12px 14px; background:var(--navy); color:#fff; border-radius:var(--radius) var(--radius) 0 0;
-    cursor:move; user-select:none; touch-action:none;
-  }
-  .float-add-head h3{color:#fff; font-size:13.5px; margin:0; pointer-events:none;}
-  .float-add-head .chev{transition:transform .15s; pointer-events:none;}
-  .float-add.collapsed .float-add-head .chev{transform:rotate(-90deg);}
-  .float-add.collapsed .float-add-body{display:none;}
-  .float-add-body{padding:14px;}
-  .float-add-body label{display:block; font-size:11.5px; color:var(--muted); margin:8px 0 3px; text-transform:uppercase; letter-spacing:.03em;}
-  .float-add-body label:first-child{margin-top:0;}
-  .float-add-body select, .float-add-body input, .float-add-body textarea{
-    width:100%; font:inherit; font-size:13px; padding:7px 9px; border-radius:7px; border:1px solid var(--line); background:#fff; color:var(--ink);
-  }
-  .float-add-body textarea{resize:vertical; min-height:60px;}
-  .float-add-submit{
-    margin-top:12px; width:100%; padding:9px; border-radius:7px; border:none;
-    background:var(--green); color:#fff; font-weight:600; font-size:13px; cursor:pointer;
-  }
-  .float-add-submit:hover{filter:brightness(1.06);}
-  .float-add-submit:disabled{opacity:.6; cursor:default;}
-  .float-add-status{font-size:12px; color:var(--muted); margin-top:8px; min-height:14px;}
-  @media (max-width:1000px){
-    .float-add{position:static; width:auto; margin:20px 0 0; max-height:none;}
-  }
 </style>
 </head>
 <body>
 
 <header class="top">
   <div class="wrap">
-    <h1>Přehled kontroly — Centrum PH / VOPH.CZ</h1>
-    <div class="sub">Zdroj: <span class="mono">vophgit/voph-tasks</span> · <span id="lastLoaded">načítám…</span></div>
+    <div class="head-row">
+      <div>
+        <h1>Přehled kontroly — Centrum PH / VOPH.CZ</h1>
+        <div class="sub">Zdroj: <span class="mono">vophgit/voph-tasks</span> · <span id="lastLoaded">načítám…</span></div>
+      </div>
+      <img class="head-logo" src="https://voph.cz/template/eshop5/special/image/logo.svg" alt="VOPH.CZ">
+    </div>
 
     <div class="toolbar">
       <button class="btn-sync" id="syncBtn" onclick="vophSyncNow()">🔄 Aktualizovat teď</button>
@@ -170,49 +174,29 @@
   </div>
 </header>
 
-<div class="float-add" id="floatAdd">
-  <div class="float-add-head" id="floatAddHead">
-    <h3>➕ Přidat úkol</h3>
-    <span class="chev" id="floatAddChev" onclick="event.stopPropagation(); vophToggleFloatAdd();" style="cursor:pointer; pointer-events:auto; padding:2px 6px;">▾</span>
-  </div>
-  <div class="float-add-body">
-    <label>Kdo</label>
-    <select id="faWho"></select>
-    <label>Doména</label>
-    <select id="faDomain"></select>
-    <label>Blok</label>
-    <select id="faBlock">
-      <option value="inbox" selected>Inbox</option>
-      <option value="next">Next steps</option>
-      <option value="easy">Next steps – easy</option>
-      <option value="waiting">Waiting for</option>
-      <option value="platby">Platby</option>
-      <option value="someday">Some other time</option>
-    </select>
-    <label>Termín (volitelně)</label>
-    <input type="date" id="faDue">
-    <label>Popis</label>
-    <textarea id="faDesc" placeholder="Kontext, částky, kontakty…"></textarea>
-    <button class="float-add-submit" id="faSubmit" onclick="vophAddTaskFromFloat()">Přidat úkol</button>
-    <div class="float-add-status" id="faStatus"></div>
-  </div>
-</div>
-
 <div class="wrap">
 <div class="layout">
 
   <aside class="sidebar">
     <div class="side-panel">
-      <h3>Otevřené úkoly podle osoby</h3>
-      <table class="mini-table" id="byPersonTable"><tbody></tbody></table>
+      <h3>▲ Priorita</h3>
+      <div class="side-body" id="panelPriority"></div>
     </div>
     <div class="side-panel">
-      <h3>Otevřené úkoly podle sekce</h3>
-      <table class="mini-table" id="bySectionTable"><tbody></tbody></table>
+      <h3>▲ Urgentní platba</h3>
+      <div class="side-body" id="panelUrgent"></div>
+    </div>
+    <div class="side-panel">
+      <h3>◷ Termín</h3>
+      <div class="side-body" id="panelTermin"></div>
+    </div>
+    <div class="side-panel">
+      <h3>⚠ Po termínu</h3>
+      <div class="side-body" id="panelOverdue"></div>
     </div>
     <div class="side-panel">
       <h3>Hotovo podle osoby</h3>
-      <table class="mini-table" id="doneByPersonTable"><tbody></tbody></table>
+      <div class="side-body"><table class="mini-table" id="doneByPersonTable"><tbody></tbody></table></div>
     </div>
   </aside>
 
@@ -220,53 +204,62 @@
 
   <section id="statsSection">
     <div class="grid-stats" id="statsGrid"><div class="stat"><div class="num">…</div><div class="lbl">načítám</div></div></div>
-    <div class="callouts" id="callouts"></div>
   </section>
 
-  <!-- ÚKOL -->
+  <!-- ÚKOL (obsahuje i řádek pro přidání nového úkolu jako první řádek tabulky) -->
   <section class="panel">
-    <h2>Úkol</h2>
-    <div class="desc">Otevřené úkoly celého týmu. Výběr „Kdo jsi" nahoře je zároveň hlavní filtr osoby.</div>
-    <div class="filters">
-      <select id="fSection"><option value="">Sekce — všechny —</option></select>
-      <select id="fDomain"><option value="">Doména — všechny —</option></select>
+    <div class="panel-head">
+      <h2>Úkol</h2>
+      <div class="desc">Otevřené úkoly celého týmu. Sekce, doména a termín lze upravit kliknutím přímo v tabulce.</div>
     </div>
-    <div class="count-badge" id="taskCount"></div>
-    <div class="table-scroll">
-      <table class="data">
-        <thead><tr><th>Úkol</th><th>Kdo</th><th>Sekce</th><th>Doména</th><th>Datum</th><th>Komentář / Hotovo</th></tr></thead>
-        <tbody id="taskBody"><tr><td colspan="6">Načítám…</td></tr></tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- NOVÉ: SPLNĚNÉ ÚKOLY (zrcadlí Úkol + datum splnění) -->
-  <section class="panel">
-    <h2>Splněné úkoly</h2>
-    <div class="desc">Stejná struktura jako Úkol, navíc datum splnění. Filtry nezávislé na tabulce výše.</div>
-    <div class="filters">
-      <select id="dOsoba"><option value="">Osoba — všichni —</option></select>
-      <select id="dSekce"><option value="">Sekce — všechny —</option></select>
-      <select id="dDomena"><option value="">Doména — všechny —</option></select>
-    </div>
-    <div class="count-badge" id="doneCount"></div>
-    <div class="table-scroll">
-      <table class="data">
-        <thead><tr><th>Úkol</th><th>Kdo</th><th>Sekce</th><th>Doména</th><th>Datum</th><th>Splněno</th></tr></thead>
-        <tbody id="doneBody"><tr><td colspan="6">Načítám…</td></tr></tbody>
-      </table>
+    <div class="panel-body">
+      <div class="filters">
+        <select id="fSection"><option value="">Sekce — všechny —</option></select>
+        <select id="fDomain"><option value="">Doména — všechny —</option></select>
+      </div>
+      <div class="count-badge" id="taskCount"></div>
+      <div class="table-scroll">
+        <table class="data">
+          <thead><tr><th>Úkol</th><th>Kdo</th><th>Sekce</th><th>Doména</th><th>Termín</th><th>Komentář / Akce</th></tr></thead>
+          <tbody id="taskBody"><tr><td colspan="6">Načítám…</td></tr></tbody>
+        </table>
+      </div>
     </div>
   </section>
 
+  <!-- SPLNĚNÉ ÚKOLY (zrcadlí Úkol + datum splnění) -->
   <section class="panel">
-    <h2>Weekly review checklist</h2>
-    <ul class="checklist">
-      <li>Inbox prázdný — vše roztříděné a otagované (osoba + doména)</li>
-      <li>Každý Project má next krok zrcadlený v Next steps</li>
-      <li>Waiting for, co dlouho mlčí — urgovat nebo eskalovat</li>
-      <li>Some other time — něco povýšit, nebo smazat co je mrtvé</li>
-      <li>Vyčistit Done starší 7 dní</li>
-    </ul>
+    <div class="panel-head">
+      <h2>Splněné úkoly</h2>
+      <div class="desc">Stejná struktura jako Úkol, navíc datum splnění. Filtry nezávislé na tabulce výše.</div>
+    </div>
+    <div class="panel-body">
+      <div class="filters">
+        <select id="dOsoba"><option value="">Osoba — všichni —</option></select>
+        <select id="dSekce"><option value="">Sekce — všechny —</option></select>
+        <select id="dDomena"><option value="">Doména — všechny —</option></select>
+      </div>
+      <div class="count-badge" id="doneCount"></div>
+      <div class="table-scroll">
+        <table class="data">
+          <thead><tr><th>Úkol</th><th>Kdo</th><th>Sekce</th><th>Doména</th><th>Datum</th><th>Splněno</th></tr></thead>
+          <tbody id="doneBody"><tr><td colspan="6">Načítám…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Weekly review checklist</h2></div>
+    <div class="panel-body">
+      <ul class="checklist">
+        <li>Inbox prázdný — vše roztříděné a otagované (osoba + doména)</li>
+        <li>Každý Project má next krok zrcadlený v Next steps</li>
+        <li>Waiting for, co dlouho mlčí — urgovat nebo eskalovat</li>
+        <li>Some other time — něco povýšit, nebo smazat co je mrtvé</li>
+        <li>Vyčistit Done starší 7 dní</li>
+      </ul>
+    </div>
   </section>
 
   </div><!-- /main-col -->
@@ -283,15 +276,21 @@ const VOPH_OWNER = "vophgit";
 const VOPH_REPO  = "voph-tasks";
 const TEAM = ["Duc","Marcel","Míša","Kristý","Nam","Vítek"];
 const SECTION_LABELS = {
-  inbox:"Inbox", projects:"Projects (multi-step, potřebuje definovaný next krok)",
-  next:"Next steps", easy:"Next steps – easy (pod 2 min)", waiting:"Waiting for",
-  platby:"Platby (dávka na konec dne)", someday:"Some other time"
+  inbox:"Inbox", projects:"Projects", next:"Next steps", easy:"Next steps – easy",
+  waiting:"Waiting for", platby:"Platby", someday:"Some other time"
 };
 const DOMAINS = ["Sales - B2B","Sales - 70","Logistika - 70","Logistika - B2B","Nákup a sklad",
   "Dovoz","Technické procesy","Administrativa","Marketing a grafika","Personal","Building"];
 
 let openTasks = [];
 let doneTasks = [];
+
+/* Normalizace: block/domain/who mohou být string (starší data) i pole (nová) */
+function toArr(v){
+  if(v === null || v === undefined || v === "") return [];
+  return Array.isArray(v) ? v : [v];
+}
+function todayISO(){ return new Date().toISOString().slice(0,10); }
 
 /* ============================================================
    TOKEN
@@ -341,12 +340,10 @@ async function vophLoadAll(){
 }
 
 /* ============================================================
-   "KDO JSI" — výběr osoby (perzistentní), bez "Jiný", s "Všichni"
+   "KDO JSI"
 ============================================================ */
 function vophOnWhoChange(){
   localStorage.setItem("voph_who_am_i", document.getElementById("whoSelect").value);
-  const who = vophWhoAmI();
-  if(who && who !== "Všichni") document.getElementById("faWho").value = who;
   vophRenderAll();
 }
 (function initWho(){
@@ -378,162 +375,11 @@ function vophPopulateFilterOptions(){
 }
 
 /* ============================================================
-   FLOATING PANEL — Přidat úkol přímo z dashboardu
-============================================================ */
-function vophInitFloatAddForm(){
-  document.getElementById("faWho").innerHTML = TEAM.map(p => `<option>${p}</option>`).join("");
-  document.getElementById("faDomain").innerHTML = DOMAINS.map(d => `<option>${d}</option>`).join("");
-  const who = vophWhoAmI();
-  if(who && who !== "Všichni") document.getElementById("faWho").value = who;
-
-  if(localStorage.getItem("voph_float_add_collapsed") === "1"){
-    document.getElementById("floatAdd").classList.add("collapsed");
-  }
-  vophRestoreFloatAddGeometry();
-  vophInitFloatAddDrag();
-  vophInitFloatAddResizeSave();
-}
-
-/* ---------- Přesouvání myší (drag), pozice se pamatuje ---------- */
-function vophInitFloatAddDrag(){
-  const panel = document.getElementById("floatAdd");
-  const head = document.getElementById("floatAddHead");
-  let startX, startY, startLeft, startTop, moved = false;
-
-  head.addEventListener("mousedown", (e) => {
-    if(e.target.id === "floatAddChev") return;
-    e.preventDefault();
-    const rect = panel.getBoundingClientRect();
-    // Přepnout z right/top na pevné left/top v px, aby šlo volně táhnout
-    panel.style.left = rect.left + "px";
-    panel.style.top = rect.top + "px";
-    panel.style.right = "auto";
-    startX = e.clientX; startY = e.clientY;
-    startLeft = rect.left; startTop = rect.top;
-    moved = false;
-
-    function onMove(e2){
-      const dx = e2.clientX - startX, dy = e2.clientY - startY;
-      if(Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
-      let newLeft = startLeft + dx, newTop = startTop + dy;
-      newLeft = Math.max(0, Math.min(window.innerWidth - 60, newLeft));
-      newTop = Math.max(0, Math.min(window.innerHeight - 40, newTop));
-      panel.style.left = newLeft + "px";
-      panel.style.top = newTop + "px";
-    }
-    function onUp(){
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-      if(moved){
-        localStorage.setItem("voph_float_add_pos", JSON.stringify({
-          left: panel.style.left, top: panel.style.top
-        }));
-      }
-    }
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
-  });
-}
-
-/* ---------- Změna velikosti myší (nativní CSS resize), rozměr se pamatuje ---------- */
-function vophInitFloatAddResizeSave(){
-  const panel = document.getElementById("floatAdd");
-  if(typeof ResizeObserver === "undefined") return;
-  let first = true;
-  const ro = new ResizeObserver(() => {
-    if(first){ first = false; return; } // ignorovat počáteční layout
-    localStorage.setItem("voph_float_add_size", JSON.stringify({
-      width: panel.style.width || panel.offsetWidth + "px",
-      height: panel.style.height || panel.offsetHeight + "px"
-    }));
-  });
-  ro.observe(panel);
-}
-
-function vophRestoreFloatAddGeometry(){
-  const panel = document.getElementById("floatAdd");
-  try{
-    const pos = JSON.parse(localStorage.getItem("voph_float_add_pos") || "null");
-    if(pos){ panel.style.left = pos.left; panel.style.top = pos.top; panel.style.right = "auto"; }
-  }catch(e){}
-  try{
-    const size = JSON.parse(localStorage.getItem("voph_float_add_size") || "null");
-    if(size){ panel.style.width = size.width; panel.style.height = size.height; }
-  }catch(e){}
-}
-
-function vophToggleFloatAdd(){
-  const el = document.getElementById("floatAdd");
-  el.classList.toggle("collapsed");
-  localStorage.setItem("voph_float_add_collapsed", el.classList.contains("collapsed") ? "1" : "0");
-}
-
-function vophGenTaskId(){
-  const d = new Date();
-  const pad = n => String(n).padStart(2,"0");
-  const stamp = d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate());
-  return `t-${stamp}-${Math.random().toString(16).slice(2,6)}`;
-}
-
-/* Sdílená funkce: zapíše libovolnou položku do fronty inbox/ (nový soubor = žádná kolize) */
-async function vophPushInboxItem(payload){
-  const token = vophToken();
-  if(!token){ vophNeedToken("Nejdřív vlož token."); return false; }
-  const d = new Date();
-  const pad = n => String(n).padStart(2,"0");
-  const name = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-`+
-               `${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}-`+
-               Math.random().toString(16).slice(2,6)+".json";
-  const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-  const res = await fetch(`https://api.github.com/repos/${VOPH_OWNER}/${VOPH_REPO}/contents/inbox/${name}`, {
-    method:"PUT",
-    headers:{ "Authorization":"Bearer "+token, "Accept":"application/vnd.github+json" },
-    body: JSON.stringify({ message:`dashboard: ${payload.action} (${payload.who||payload.completed_by||""})`, content:b64 })
-  });
-  if(res.status===401 || res.status===403){
-    localStorage.removeItem("voph_gh_token");
-    vophNeedToken("Token neplatí nebo vypršel — vlož nový.");
-    return false;
-  }
-  return res.ok;
-}
-
-async function vophAddTaskFromFloat(){
-  const who = document.getElementById("faWho").value;
-  const domain = document.getElementById("faDomain").value;
-  const block = document.getElementById("faBlock").value;
-  const due = document.getElementById("faDue").value || null;
-  const desc = document.getElementById("faDesc").value.trim();
-  const status = document.getElementById("faStatus");
-  const btn = document.getElementById("faSubmit");
-
-  if(!desc){ status.textContent = "Popis nesmí být prázdný."; return; }
-
-  btn.disabled = true; status.textContent = "Odesílám…";
-  const id = vophGenTaskId();
-  const ok = await vophPushInboxItem({
-    action:"add", id, who, domain, block, desc, due,
-    source:"dashboard", ts:new Date().toISOString()
-  });
-  btn.disabled = false;
-
-  if(ok){
-    status.textContent = `Přidáno do fronty (${id}). Projeví se po syncu.`;
-    document.getElementById("faDesc").value = "";
-    document.getElementById("faDue").value = "";
-  } else if(status.textContent === "Odesílám…"){
-    status.textContent = "Odeslání selhalo — zkus to znovu.";
-  }
-}
-
-/* ============================================================
    VYKRESLENÍ
 ============================================================ */
 function vophRenderAll(){
   vophRenderStats();
-  vophRenderCallouts();
-  vophRenderByPerson();
-  vophRenderBySection();
+  vophRenderSidePanels();
   vophRenderTaskTable();
   vophRenderDoneByPerson();
   vophRenderDoneTable();
@@ -542,9 +388,9 @@ function vophRenderAll(){
 function vophRenderStats(){
   const counts = {
     total: openTasks.length,
-    next: openTasks.filter(t=>t.block==="next").length,
-    waiting: openTasks.filter(t=>t.block==="waiting").length,
-    platby: openTasks.filter(t=>t.block==="platby").length,
+    next: openTasks.filter(t=>toArr(t.block).includes("next")).length,
+    waiting: openTasks.filter(t=>toArr(t.block).includes("waiting")).length,
+    platby: openTasks.filter(t=>toArr(t.block).includes("platby")).length,
     done7: doneTasks.filter(t=>{
       const d = new Date(t.completed_at); const now = new Date();
       return (now - d) / 86400000 <= 7;
@@ -561,150 +407,380 @@ function vophRenderStats(){
     `<div class="stat"><div class="num">${n}</div><div class="lbl">${l}</div></div>`).join("");
 }
 
-function vophRenderCallouts(){
+/* ---------- Floating panely: Priorita / Urgentní / Termín / Po termínu ---------- */
+function vophRenderSidePanels(){
   const who = vophWhoAmI();
-  const scope = who === "Všichni" ? openTasks : openTasks.filter(t => t.who === who);
+  const scope = who === "Všichni" ? openTasks : openTasks.filter(t => t.who === who || toArr(t.who).includes(who));
 
-  const out = [];
-  const today = new Date().toISOString().slice(0,10);
+  const today = todayISO();
   const in3d = new Date(Date.now() + 3*86400000).toISOString().slice(0,10);
 
   const priority = scope.filter(t => /TOP PRIORITA/i.test(t.desc));
-  const urgent = scope.filter(t => t.block==="platby" && /VÝJIMKA/i.test(t.desc));
+  const urgent = scope.filter(t => toArr(t.block).includes("platby") && /VÝJIMKA/i.test(t.desc));
   const overdue = scope.filter(t => t.due && t.due < today);
   const upcoming = scope.filter(t => t.due && t.due >= today && t.due <= in3d);
 
-  priority.slice(0,1).forEach(t => out.push(`<div class="callout priority"><b>▲ PRIORITA</b> ${vophEsc(t.desc)} (${t.who})</div>`));
-  urgent.slice(0,1).forEach(t => out.push(`<div class="callout urgent"><b>▲ URGENTNÍ PLATBA</b> ${vophEsc(t.desc)} (${t.who})</div>`));
+  const renderList = (rows, cls, empty, fmt) => {
+    if(!rows.length) return `<div class="side-empty">${empty}</div>`;
+    return rows.slice(0,8).map(t => `<div class="alert-row ${cls}">${fmt(t)}</div>`).join("");
+  };
 
-  if(upcoming.length){
-    out.push(`<div class="callout termin"><b>◷ TERMÍN (${upcoming.length})</b></div>`);
-    upcoming.slice(0,6).forEach(t => out.push(`<div class="callout termin">${t.who}: ${vophEsc(t.desc)} — do ${t.due}</div>`));
-  }
-  if(overdue.length){
-    out.push(`<div class="callout overdue"><b>⚠ PO TERMÍNU (${overdue.length})</b></div>`);
-    overdue.slice(0,6).forEach(t => out.push(`<div class="callout overdue">${t.who}: ${vophEsc(t.desc)}</div>`));
-  }
-  if(!out.length){
-    out.push(`<div class="callouts-empty">Žádné prioritní, urgentní ani termínované položky${who!=="Všichni" ? " pro "+who : ""}.</div>`);
-  }
-  document.getElementById("callouts").innerHTML = out.join("");
+  document.getElementById("panelPriority").innerHTML = renderList(priority, "priority",
+    "Žádné.", t => `<b>${t.who}</b>${vophEsc(t.desc)}`);
+  document.getElementById("panelUrgent").innerHTML = renderList(urgent, "urgent",
+    "Žádné.", t => `<b>${t.who}</b>${vophEsc(t.desc)}`);
+  document.getElementById("panelTermin").innerHTML = renderList(upcoming, "termin",
+    "Nic v nejbližších 3 dnech.", t => `<b>do ${t.due}</b>${t.who}: ${vophEsc(t.desc)}`);
+  document.getElementById("panelOverdue").innerHTML = renderList(overdue, "overdue",
+    "Nic po termínu.", t => `<b>${t.due}</b>${t.who}: ${vophEsc(t.desc)}`);
 }
 
-function vophRenderByPerson(){
-  const counts = {};
-  openTasks.forEach(t => counts[t.who] = (counts[t.who]||0)+1);
-  const rows = Object.entries(counts).sort((a,b)=>b[1]-a[1])
-    .map(([k,v]) => `<tr><td>${k}</td><td class="n">${v}</td></tr>`).join("");
-  document.getElementById("byPersonTable").innerHTML = `<thead><tr><th>Osoba</th><th style="text-align:right">Počet</th></tr></thead><tbody>${rows}</tbody>`;
-}
-
-function vophRenderBySection(){
-  const counts = {};
-  openTasks.forEach(t => counts[t.block] = (counts[t.block]||0)+1);
-  const rows = Object.entries(SECTION_LABELS)
-    .map(([k,label]) => [label, counts[k]||0])
-    .sort((a,b)=>b[1]-a[1])
-    .map(([label,v]) => `<tr><td>${label}</td><td class="n">${v}</td></tr>`).join("");
-  document.getElementById("bySectionTable").innerHTML = `<thead><tr><th>Sekce</th><th style="text-align:right">Počet</th></tr></thead><tbody>${rows}</tbody>`;
-}
-
+/* ---------- Filtrování tabulky Úkol ---------- */
 function vophFilteredTasks(){
   const who = vophWhoAmI();
   const section = document.getElementById("fSection").value;
   const domain = document.getElementById("fDomain").value;
   return openTasks.filter(t =>
-    (who==="Všichni" || t.who===who) &&
-    (!section || t.block===section) &&
-    (!domain || t.domain===domain)
+    (who==="Všichni" || t.who===who || toArr(t.who).includes(who)) &&
+    (!section || toArr(t.block).includes(section)) &&
+    (!domain || toArr(t.domain).includes(domain))
   ).sort((a,b) => (b.due||"9999").localeCompare(a.due||"9999") || (b.created||"").localeCompare(a.created||""));
 }
 
 function vophRenderTaskTable(){
   const rows = vophFilteredTasks();
   document.getElementById("taskCount").textContent = `${rows.length} položek`;
-  document.getElementById("taskBody").innerHTML = rows.length ? rows.map(t => `
+  const addRowHtml = vophAddRowHtml();
+  document.getElementById("taskBody").innerHTML = addRowHtml + (rows.length ? rows.map(t => `
     <tr data-id="${t.id}">
-      <td>${vophEsc(t.desc)}${t.weight ? ` <span class="tag">${t.weight}</span>`:""}</td>
-      <td>${t.who}</td>
-      <td>${SECTION_LABELS[t.block]||t.block}</td>
-      <td>${t.domain}</td>
-      <td class="date-cell">${t.due ? t.due+" ⏰" : (t.created||"")}</td>
-      <td>${vophKomentarCellHtml(t)}</td>
-    </tr>`).join("") : `<tr><td colspan="6" style="color:var(--muted)">Žádné položky pro vybraný filtr.</td></tr>`;
+      <td>${t.weight ? `<span class="tag">${t.weight}</span> `:""}${vophEsc(t.desc)}</td>
+      <td>${vophWhoDisplay(t)}</td>
+      <td class="editable-cell" onclick="vophOpenMultiEditor(this,'${t.id}','block')">
+        <div class="tag-list">${toArr(t.block).map(b=>`<span class="tag">${SECTION_LABELS[b]||b}</span>`).join("")}</div>
+      </td>
+      <td class="editable-cell" onclick="vophOpenMultiEditor(this,'${t.id}','domain')">
+        <div class="tag-list">${toArr(t.domain).map(d=>`<span class="tag">${vophEsc(d)}</span>`).join("")}</div>
+      </td>
+      <td class="editable-cell termin-cell" onclick="vophOpenTerminEditor(this,'${t.id}')">
+        <span class="termin-display">${vophEsc(t.due || t.created || "—")}</span>
+      </td>
+      <td>${vophAkceCellHtml(t)}</td>
+    </tr>`).join("") : `<tr><td colspan="6" style="color:var(--muted)">Žádné položky pro vybraný filtr.</td></tr>`);
 }
 
-/* Komentář je POVINNÝ — tlačítko Hotovo je uzamčené, dokud pole není vyplněné */
-const vophDraftComments = {};
-function vophKomentarCellHtml(t){
-  const draft = vophEsc(vophDraftComments[t.id] || "");
+function vophWhoDisplay(t){
+  const arr = toArr(t.who);
+  return arr.length ? arr.join(", ") : (t.who || "—");
+}
+
+/* ============================================================
+   ŘÁDEK „PŘIDAT ÚKOL" — první řádek tabulky Úkol
+============================================================ */
+let vophAddDraft = { who: TEAM[0], block: ["inbox"], domain: [] };
+
+function vophAddRowHtml(){
+  const who = vophWhoAmI();
+  const defaultWho = (who && who !== "Všichni") ? who : vophAddDraft.who;
   return `
-    <div class="komentar-cell">
+    <tr class="add-row">
+      <td><input type="text" class="add-desc" id="addDesc" placeholder="Popis úkolu…"></td>
+      <td>
+        <select id="addWho">${TEAM.map(p => `<option ${p===defaultWho?"selected":""}>${p}</option>`).join("")}</select>
+      </td>
+      <td class="editable-cell" id="addBlockCell" onclick="vophOpenMultiEditorAdd(this,'block')">
+        <div class="tag-list">${vophAddDraft.block.map(b=>`<span class="tag">${SECTION_LABELS[b]||b}</span>`).join("")}</div>
+      </td>
+      <td class="editable-cell" id="addDomainCell" onclick="vophOpenMultiEditorAdd(this,'domain')">
+        <div class="tag-list">${vophAddDraft.domain.map(d=>`<span class="tag">${vophEsc(d)}</span>`).join("")}</div>
+      </td>
+      <td><input type="date" id="addDue" placeholder="${todayISO()}"></td>
+      <td>
+        <button class="add-submit" id="addSubmitBtn" onclick="vophSubmitAddRow()">+ Přidat úkol</button>
+        <div class="add-status" id="addStatus"></div>
+      </td>
+    </tr>`;
+}
+
+async function vophSubmitAddRow(){
+  const desc = document.getElementById("addDesc").value.trim();
+  const status = document.getElementById("addStatus");
+  if(!desc){ status.textContent = "Popis nesmí být prázdný."; return; }
+  const who = document.getElementById("addWho").value;
+  const due = document.getElementById("addDue").value || todayISO(); // termín = dnešek, pokud nezadáno
+  const block = vophAddDraft.block.length ? vophAddDraft.block : ["inbox"];
+  const domain = vophAddDraft.domain;
+
+  const btn = document.getElementById("addSubmitBtn");
+  btn.disabled = true; status.textContent = "Odesílám…";
+  const id = vophGenTaskId();
+  const ok = await vophPushInboxItem({
+    action:"add", id, who, domain, block, desc, due,
+    source:"dashboard", ts:new Date().toISOString()
+  });
+  btn.disabled = false;
+  if(ok){
+    status.textContent = `Přidáno (${id}). Projeví se po syncu.`;
+    vophAddDraft = { who, block:["inbox"], domain:[] };
+    vophRenderTaskTable();
+  } else {
+    status.textContent = "Odeslání selhalo — zkus znovu.";
+  }
+}
+
+function vophGenTaskId(){
+  const d = new Date();
+  const pad = n => String(n).padStart(2,"0");
+  return `t-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${Math.random().toString(16).slice(2,6)}`;
+}
+
+/* ============================================================
+   EDITOVATELNÉ BUŇKY — Sekce / Doména (víceklikový multi-select)
+============================================================ */
+function vophOpenMultiEditor(cellEl, id, field){
+  if(cellEl.querySelector(".cell-editor")) return; // už otevřeno
+  const t = openTasks.find(x => x.id === id);
+  if(!t) return;
+  const options = field === "block" ? Object.entries(SECTION_LABELS) : DOMAINS.map(d=>[d,d]);
+  const current = new Set(toArr(t[field]));
+  const original = cellEl.innerHTML;
+
+  cellEl.innerHTML = `<div class="cell-editor" onclick="event.stopPropagation()">
+    ${options.map(([val,label]) => `
+      <label><input type="checkbox" value="${val}" ${current.has(val)?"checked":""}> ${label}</label>
+    `).join("")}
+    <div class="editor-actions">
+      <button class="ok" onclick="vophApplyMultiEdit('${id}','${field}', this)">✓ Uložit</button>
+      <button onclick="vophRenderTaskTable()">✕ Zrušit</button>
+    </div>
+  </div>`;
+}
+
+async function vophApplyMultiEdit(id, field, btnEl){
+  const editor = btnEl.closest(".cell-editor");
+  const values = [...editor.querySelectorAll("input[type=checkbox]:checked")].map(i => i.value);
+  const t = openTasks.find(x => x.id === id);
+  if(t) t[field] = values;
+  vophRenderTaskTable();
+  const payload = { action:"update", id, ts:new Date().toISOString() };
+  payload[field] = values;
+  const ok = await vophPushInboxItem(payload);
+  document.getElementById("syncStatus").textContent = ok
+    ? `Úprava ${id} zapsána do fronty.` : `Úprava ${id} se nepodařila odeslat.`;
+}
+
+/* Stejné pro řádek přidání (mění jen lokální draft, ne task) */
+function vophOpenMultiEditorAdd(cellEl, field){
+  if(cellEl.querySelector(".cell-editor")) return;
+  const options = field === "block" ? Object.entries(SECTION_LABELS) : DOMAINS.map(d=>[d,d]);
+  const current = new Set(vophAddDraft[field]);
+  cellEl.innerHTML = `<div class="cell-editor" onclick="event.stopPropagation()">
+    ${options.map(([val,label]) => `
+      <label><input type="checkbox" value="${val}" ${current.has(val)?"checked":""}> ${label}</label>
+    `).join("")}
+    <div class="editor-actions">
+      <button class="ok" onclick="vophApplyMultiEditAdd('${field}', this)">✓ Uložit</button>
+      <button onclick="vophRenderTaskTable()">✕ Zrušit</button>
+    </div>
+  </div>`;
+}
+function vophApplyMultiEditAdd(field, btnEl){
+  const editor = btnEl.closest(".cell-editor");
+  vophAddDraft[field] = [...editor.querySelectorAll("input[type=checkbox]:checked")].map(i => i.value);
+  vophRenderTaskTable();
+}
+
+/* ============================================================
+   EDITOVATELNÁ BUŇKA — Termín (inline datum)
+============================================================ */
+function vophOpenTerminEditor(cellEl, id){
+  if(cellEl.querySelector("input")) return;
+  const t = openTasks.find(x => x.id === id);
+  const val = (t && (t.due || t.created)) || todayISO();
+  cellEl.onclick = null;
+  cellEl.innerHTML = `<input type="date" value="${val}" onchange="vophSubmitTerminChange(this,'${id}')" onclick="event.stopPropagation()">`;
+  cellEl.querySelector("input").focus();
+}
+
+async function vophSubmitTerminChange(inputEl, id){
+  const newDue = inputEl.value;
+  const t = openTasks.find(x => x.id === id);
+  if(t) t.due = newDue;
+  vophRenderTaskTable();
+  const ok = await vophPushInboxItem({ action:"update", id, due:newDue, ts:new Date().toISOString() });
+  document.getElementById("syncStatus").textContent = ok
+    ? `Termín ${id} aktualizován.` : `Aktualizace termínu ${id} se nepodařila odeslat.`;
+}
+
+/* ============================================================
+   AKCE BUŇKA — Komentář + Hotovo / Předat / Kontrola
+============================================================ */
+const vophDraftComments = {};
+const vophPendingConfirm = {};
+
+function vophAkceCellHtml(t){
+  const draft = vophEsc(vophDraftComments[t.id] || "");
+  const hasText = draft.trim().length > 0;
+  return `
+    <div class="akce-cell" data-id="${t.id}">
       <input type="text" class="komentar-input" placeholder="Komentář (povinné)"
              value="${draft}" oninput="vophOnKomentarInput(this,'${t.id}')">
-      <button class="done-btn" data-state="idle" ${draft.trim() ? "" : "disabled"}
-              onclick="vophHandleDoneClick(this,'${t.id}')">Hotovo</button>
+      <div class="akce-buttons" id="akceButtons-${t.id}">
+        <button class="done-btn" data-state="idle" ${hasText?"":"disabled"}
+                onclick="vophHandleDoneClick(this,'${t.id}')">Hotovo</button>
+        <button class="predat-btn" ${hasText?"":"disabled"}
+                onclick="vophOpenHandoffPicker('${t.id}')">Předat</button>
+        <button class="kontrola-btn" data-state="idle" ${(hasText && vophWhoAmI()!=="Všichni")?"":"disabled"}
+                onclick="vophHandleKontrolaClick(this,'${t.id}')">Kontrola</button>
+      </div>
     </div>`;
 }
 
 function vophOnKomentarInput(input, id){
   vophDraftComments[id] = input.value;
-  const btn = input.nextElementSibling;
   const hasText = input.value.trim().length > 0;
-  btn.disabled = !hasText;
-  if(!hasText && btn.dataset.state === "confirm"){
-    // Smazal komentář uprostřed potvrzování — vrátit tlačítko do klidového stavu
-    btn.dataset.state = "idle";
-    btn.textContent = "Hotovo";
-    btn.classList.remove("confirm");
+  const cell = input.closest(".akce-cell");
+  const doneBtn = cell.querySelector(".done-btn");
+  const predatBtn = cell.querySelector(".predat-btn");
+  const kontrolaBtn = cell.querySelector(".kontrola-btn");
+  doneBtn.disabled = !hasText;
+  predatBtn.disabled = !hasText;
+  kontrolaBtn.disabled = !(hasText && vophWhoAmI()!=="Všichni");
+  if(!hasText){
+    [doneBtn, kontrolaBtn].forEach(b => {
+      if(b.dataset.state === "confirm"){
+        b.dataset.state = "idle"; b.classList.remove("confirm");
+        b.textContent = b===doneBtn ? "Hotovo" : "Kontrola";
+      }
+    });
   }
 }
 
-/* Dvojklik s potvrzením — chrání proti omylem kliknutí */
-const vophPendingConfirm = {};
+/* ---------- Hotovo (dvojklik s potvrzením) ---------- */
 function vophHandleDoneClick(btn, id){
-  const input = btn.previousElementSibling;
-  if(!input.value.trim()) return; // pojistka navíc, i když by disabled mělo stačit
-
+  const cell = btn.closest(".akce-cell");
+  const input = cell.querySelector(".komentar-input");
+  if(!input.value.trim()) return;
   const state = btn.dataset.state;
   if(state === "idle"){
-    btn.dataset.state = "confirm";
-    btn.textContent = "Opravdu? Klikni znovu";
-    btn.classList.add("confirm");
-    clearTimeout(vophPendingConfirm[id]);
-    vophPendingConfirm[id] = setTimeout(() => {
-      if(btn.dataset.state === "confirm"){
-        btn.dataset.state = "idle";
-        btn.textContent = "Hotovo";
-        btn.classList.remove("confirm");
-      }
+    btn.dataset.state = "confirm"; btn.textContent = "Opravdu? Klikni znovu"; btn.classList.add("confirm");
+    clearTimeout(vophPendingConfirm[id+"-done"]);
+    vophPendingConfirm[id+"-done"] = setTimeout(() => {
+      if(btn.dataset.state === "confirm"){ btn.dataset.state="idle"; btn.textContent="Hotovo"; btn.classList.remove("confirm"); }
     }, 5000);
   } else if(state === "confirm"){
-    clearTimeout(vophPendingConfirm[id]);
-    btn.dataset.state = "sent";
-    btn.textContent = "Odesláno ✓";
-    btn.classList.remove("confirm");
-    btn.classList.add("sent");
-    btn.disabled = true;
-    input.disabled = true;
+    clearTimeout(vophPendingConfirm[id+"-done"]);
+    btn.dataset.state = "sent"; btn.textContent = "Odesláno ✓"; btn.classList.remove("confirm"); btn.classList.add("sent");
+    btn.disabled = true; input.disabled = true;
+    cell.querySelector(".predat-btn").disabled = true;
+    cell.querySelector(".kontrola-btn").disabled = true;
     vophSubmitCompletion(id, input.value.trim());
     delete vophDraftComments[id];
   }
 }
-
 async function vophSubmitCompletion(id, comment){
   const task = openTasks.find(t => t.id === id);
   const who = vophWhoAmI();
   const completedBy = (who && who !== "Všichni") ? who : (task ? task.who : "Nam");
-  const payload = { action:"complete", id, completed_by: completedBy, comment,
-                     source:"dashboard", ts:new Date().toISOString() };
-  const ok = await vophPushInboxItem(payload);
+  const ok = await vophPushInboxItem({ action:"complete", id, completed_by: completedBy, comment,
+                     source:"dashboard", ts:new Date().toISOString() });
   document.getElementById("syncStatus").textContent = ok
-    ? `Splnění ${id} zapsáno do fronty — projeví se po syncu.`
-    : `Odeslání splnění ${id} selhalo — zkus to znovu.`;
+    ? `Splnění ${id} zapsáno do fronty.` : `Odeslání splnění ${id} selhalo.`;
 }
 
-/* ---------- Hotovo podle osoby (floating panel v sidebaru, bez filtrů) ---------- */
+/* ---------- Kontrola (self-assign, dvojklik s potvrzením) ---------- */
+function vophHandleKontrolaClick(btn, id){
+  const cell = btn.closest(".akce-cell");
+  const input = cell.querySelector(".komentar-input");
+  const who = vophWhoAmI();
+  if(!input.value.trim() || who === "Všichni") return;
+  const state = btn.dataset.state;
+  if(state === "idle"){
+    btn.dataset.state = "confirm"; btn.textContent = "Opravdu? Klikni znovu"; btn.classList.add("confirm");
+    clearTimeout(vophPendingConfirm[id+"-kontrola"]);
+    vophPendingConfirm[id+"-kontrola"] = setTimeout(() => {
+      if(btn.dataset.state === "confirm"){ btn.dataset.state="idle"; btn.textContent="Kontrola"; btn.classList.remove("confirm"); }
+    }, 5000);
+  } else if(state === "confirm"){
+    clearTimeout(vophPendingConfirm[id+"-kontrola"]);
+    btn.dataset.state = "sent"; btn.textContent = "Odesláno ✓"; btn.classList.remove("confirm"); btn.classList.add("sent");
+    btn.disabled = true; input.disabled = true;
+    cell.querySelector(".predat-btn").disabled = true;
+    cell.querySelector(".done-btn").disabled = true;
+    vophSubmitReassign(id, [who], input.value.trim());
+    delete vophDraftComments[id];
+  }
+}
+
+/* ---------- Předat (výběr 1+ lidí, pak potvrdit) ---------- */
+function vophOpenHandoffPicker(id){
+  const buttonsEl = document.getElementById("akceButtons-"+id);
+  if(!buttonsEl) return;
+  const original = buttonsEl.innerHTML;
+  buttonsEl.innerHTML = `<div class="handoff-picker">
+    ${TEAM.map(p => `<label><input type="checkbox" value="${p}"> ${p}</label>`).join("")}
+    <div class="editor-actions">
+      <button class="ok" onclick="vophConfirmHandoff('${id}', this)">✓ Potvrdit předání</button>
+      <button onclick="vophCancelHandoff('${id}')">✕ Zrušit</button>
+    </div>
+  </div>`;
+  buttonsEl.dataset.original = "1";
+}
+function vophCancelHandoff(id){ vophRenderTaskTable(); }
+async function vophConfirmHandoff(id, btnEl){
+  const picker = btnEl.closest(".handoff-picker");
+  const people = [...picker.querySelectorAll("input[type=checkbox]:checked")].map(i => i.value);
+  if(!people.length){ return; }
+  const cell = document.querySelector(`.akce-cell[data-id="${id}"]`);
+  const comment = cell ? cell.querySelector(".komentar-input").value.trim() : "";
+  btnEl.textContent = "Odesílám…"; btnEl.disabled = true;
+  await vophSubmitReassign(id, people, comment, true);
+  delete vophDraftComments[id];
+}
+
+async function vophSubmitReassign(id, peopleArr, comment, isHandoff){
+  const t = openTasks.find(x => x.id === id);
+  const handedOffBy = (vophWhoAmI() !== "Všichni") ? vophWhoAmI() : (t ? t.who : null);
+  if(t){ t.who = peopleArr; t.block = ["next"]; }
+  vophRenderTaskTable();
+  const payload = { action:"update", id, who: peopleArr, block:["next"], comment,
+                     ts:new Date().toISOString() };
+  if(isHandoff) payload.handed_off_by = handedOffBy;
+  const ok = await vophPushInboxItem(payload);
+  document.getElementById("syncStatus").textContent = ok
+    ? `Úkol ${id} přesunut do Next steps (${peopleArr.join(", ")}).`
+    : `Odeslání pro ${id} selhalo.`;
+}
+
+/* ============================================================
+   Sdílený zápis do fronty inbox/
+============================================================ */
+async function vophPushInboxItem(payload){
+  const token = vophToken();
+  if(!token){ vophNeedToken("Nejdřív vlož token."); return false; }
+  const d = new Date();
+  const pad = n => String(n).padStart(2,"0");
+  const name = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-`+
+               `${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}-`+
+               Math.random().toString(16).slice(2,6)+".json";
+  const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  const res = await fetch(`https://api.github.com/repos/${VOPH_OWNER}/${VOPH_REPO}/contents/inbox/${name}`, {
+    method:"PUT",
+    headers:{ "Authorization":"Bearer "+token, "Accept":"application/vnd.github+json" },
+    body: JSON.stringify({ message:`dashboard: ${payload.action}`, content:b64 })
+  });
+  if(res.status===401 || res.status===403){
+    localStorage.removeItem("voph_gh_token");
+    vophNeedToken("Token neplatí nebo vypršel — vlož nový.");
+    return false;
+  }
+  return res.ok;
+}
+
+function vophEsc(s){
+  const d = document.createElement("div"); d.textContent = s||""; return d.innerHTML;
+}
+
+/* ---------- Hotovo podle osoby (bez filtrů) ---------- */
 function vophRenderDoneByPerson(){
   const counts = {};
   doneTasks.forEach(t => counts[t.who] = (counts[t.who]||0)+1);
@@ -714,13 +790,15 @@ function vophRenderDoneByPerson(){
     `<thead><tr><th>Osoba</th><th style="text-align:right">Počet</th></tr></thead><tbody>${rows || '<tr><td colspan="2" style="color:var(--muted)">Žádné položky.</td></tr>'}</tbody>`;
 }
 
-/* ---------- Splněné úkoly (nová plná tabulka, zrcadlí Úkol) ---------- */
+/* ---------- Splněné úkoly (plná tabulka, vlastní filtry) ---------- */
 function vophFilteredDoneTable(){
   const osoba = document.getElementById("dOsoba").value;
   const sekce = document.getElementById("dSekce").value;
   const domena = document.getElementById("dDomena").value;
   return doneTasks.filter(t =>
-    (!osoba || t.who===osoba) && (!sekce || t.block===sekce) && (!domena || t.domain===domena)
+    (!osoba || t.who===osoba || toArr(t.who).includes(osoba)) &&
+    (!sekce || toArr(t.block).includes(sekce)) &&
+    (!domena || toArr(t.domain).includes(domena))
   ).sort((a,b) => (b.completed_at||"").localeCompare(a.completed_at||""));
 }
 function vophRenderDoneTable(){
@@ -730,20 +808,16 @@ function vophRenderDoneTable(){
     <tr>
       <td>${t.weight ? `<span class="tag done">${t.weight}</span> `:""}${vophEsc(t.desc)}
         ${t.comment ? `<div style="font-size:11.5px; color:var(--muted); margin-top:3px;">💬 ${vophEsc(t.comment)}</div>` : ""}</td>
-      <td>${t.who}</td>
-      <td>${t.block ? (SECTION_LABELS[t.block]||t.block) : "—"}</td>
-      <td>${t.domain}</td>
+      <td>${vophWhoDisplay(t)}</td>
+      <td>${toArr(t.block).map(b=>SECTION_LABELS[b]||b).join(", ") || "—"}</td>
+      <td>${toArr(t.domain).join(", ") || "—"}</td>
       <td class="date-cell">${t.created||""}</td>
       <td class="date-cell">${(t.completed_at||"").slice(0,10)} <span style="color:var(--green)">✓</span> ${t.completed_by ? "("+t.completed_by+")":""}</td>
     </tr>`).join("") : `<tr><td colspan="6" style="color:var(--muted)">Žádné položky pro vybraný filtr.</td></tr>`;
 }
 
-function vophEsc(s){
-  const d = document.createElement("div"); d.textContent = s||""; return d.innerHTML;
-}
-
 /* ============================================================
-   SYNC — tlačítko "Aktualizovat teď" = spustit GitHub Actions + počkat + přenačíst
+   SYNC — "Aktualizovat teď"
 ============================================================ */
 async function vophSyncNow(){
   const btn = document.getElementById("syncBtn");
@@ -790,7 +864,6 @@ async function vophSyncNow(){
 /* ============================================================
    START
 ============================================================ */
-vophInitFloatAddForm();
 vophLoadAll();
 </script>
 </body>
