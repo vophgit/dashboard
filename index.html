@@ -150,6 +150,11 @@
     display:inline-flex; align-items:center; gap:4px; font-size:11px; padding:3px 7px;
     border-radius:5px; background:var(--brand-soft); color:var(--brand-dark); cursor:pointer; max-width:150px;
   }
+  .attachment-chip.is-image{ padding:2px 7px 2px 2px; }
+  .attachment-thumb{
+    width:28px; height:28px; border-radius:4px; object-fit:cover; flex-shrink:0;
+    background:var(--brand-softer); border:1px solid rgba(0,0,0,.08);
+  }
   .attachment-chip .fname{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100px;}
   .attachment-chip .rm{color:var(--red); font-weight:700; cursor:pointer; padding:0 2px;}
   .attachment-chip .rm:hover{text-decoration:underline;}
@@ -535,6 +540,7 @@ function vophRenderTaskTable(){
       <td>${vophAkceCellHtml(t)}</td>
     </tr>`).join("") : `<tr><td colspan="7" style="color:var(--muted)">Žádné položky pro vybraný filtr.</td></tr>`);
   vophUpdateSortIcons();
+  vophLoadThumbnails();
 }
 
 function vophWhoDisplay(t){
@@ -770,11 +776,7 @@ function vophAkceCellHtml(t){
 ============================================================ */
 function vophAttachmentsHtml(t){
   const list = t.attachments || [];
-  const chips = list.map(a => `
-    <span class="attachment-chip" onclick="vophDownloadAttachment('${vophEscJs(a.path)}','${vophEscJs(a.name)}')" title="${vophEsc(a.name)} (${vophFormatSize(a.size)})">
-      📎 <span class="fname">${vophEsc(a.name)}</span>
-      <span class="rm" onclick="event.stopPropagation(); vophRemoveAttachment('${t.id}','${a.path}')" title="Odebrat přílohu">✕</span>
-    </span>`).join("");
+  const chips = list.map(a => vophAttachmentChipHtml(a, t.id, true)).join("");
   return `
     <div class="attach-row">
       ${chips}
@@ -790,6 +792,66 @@ function vophFormatSize(bytes){
   if(bytes < 1024) return bytes + " B";
   if(bytes < 1024*1024) return (bytes/1024).toFixed(1) + " KB";
   return (bytes/1024/1024).toFixed(1) + " MB";
+}
+
+function vophIsImageFile(name){
+  return /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(name || "");
+}
+
+/* Vytvoří jednu "chipku" přílohy. Pro obrázky rovnou vloží <img> s prázdným src —
+   skutečný náhled se dotáhne asynchronně přes vophLoadThumbnails() (viz níže),
+   protože stažení obsahu z privátního repa vyžaduje autentizovaný fetch, ne obyčejné <img src="...">. */
+function vophAttachmentChipHtml(a, taskId, removable){
+  const isImg = vophIsImageFile(a.name);
+  const preview = isImg
+    ? `<img class="attachment-thumb" data-path="${vophEsc(a.path)}" src="" alt="">`
+    : `📎`;
+  const removeBtn = removable
+    ? `<span class="rm" onclick="event.stopPropagation(); vophRemoveAttachment('${taskId}','${a.path}')" title="Odebrat přílohu">✕</span>`
+    : "";
+  return `
+    <span class="attachment-chip ${isImg?'is-image':''}" onclick="vophDownloadAttachment('${vophEscJs(a.path)}','${vophEscJs(a.name)}')" title="${vophEsc(a.name)} (${vophFormatSize(a.size)})">
+      ${preview}<span class="fname">${vophEsc(a.name)}</span>
+      ${removeBtn}
+    </span>`;
+}
+
+/* Cache náhledů podle cesty v repu — jednou stažený obrázek se znovu nefetchuje
+   při každém překreslení tabulky (Sekce/Doména/Termín editace apod. překreslují celý řádek). */
+const vophThumbCache = {};
+
+function vophLoadThumbnails(){
+  document.querySelectorAll(".attachment-thumb").forEach(img => {
+    const path = img.dataset.path;
+    const cached = vophThumbCache[path];
+    if(cached && cached !== "loading" && cached !== "failed"){
+      img.src = cached;
+    } else if(cached !== "loading"){
+      vophFetchThumbnail(path);
+    }
+  });
+}
+
+async function vophFetchThumbnail(path){
+  vophThumbCache[path] = "loading";
+  const token = vophToken();
+  if(!token){ vophThumbCache[path] = "failed"; return; }
+  try{
+    const res = await fetch(`https://api.github.com/repos/${VOPH_OWNER}/${VOPH_REPO}/contents/${path}`, {
+      headers:{ "Authorization":"Bearer "+token, "Accept":"application/vnd.github.raw+json" }
+    });
+    if(!res.ok){ vophThumbCache[path] = "failed"; return; }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    vophThumbCache[path] = url;
+    // Aktuální DOM v okamžiku dokončení fetch — nemusí to už být stejné <img>, na kterém se čekání spustilo.
+    // Porovnává se přes dataset (ne CSS selektor s escapováním), ať to funguje spolehlivě všude.
+    document.querySelectorAll(".attachment-thumb").forEach(el => {
+      if(el.dataset.path === path) el.src = url;
+    });
+  }catch(e){
+    vophThumbCache[path] = "failed";
+  }
 }
 
 function vophSanitizeFilename(name){
@@ -1096,8 +1158,7 @@ function vophRenderDoneTable(){
   document.getElementById("doneBody").innerHTML = rows.length ? rows.map(t => `
     <tr>
       <td>${t.weight ? `<span class="tag done">${t.weight}</span> `:""}${vophEsc(t.desc)}
-        ${(t.attachments && t.attachments.length) ? `<div class="attach-row" style="margin-top:4px;">${t.attachments.map(a =>
-          `<span class="attachment-chip" onclick="vophDownloadAttachment('${vophEscJs(a.path)}','${vophEscJs(a.name)}')" title="${vophEsc(a.name)}">📎 <span class="fname">${vophEsc(a.name)}</span></span>`).join("")}</div>` : ""}
+        ${(t.attachments && t.attachments.length) ? `<div class="attach-row" style="margin-top:4px;">${t.attachments.map(a => vophAttachmentChipHtml(a, t.id, false)).join("")}</div>` : ""}
         ${vophCommentsHtml(t)}</td>
       <td>${vophWhoDisplay(t)}</td>
       <td>${toArr(t.block).map(b=>SECTION_LABELS[b]||b).join(", ") || "—"}</td>
@@ -1105,6 +1166,7 @@ function vophRenderDoneTable(){
       <td class="date-cell">${t.created||""}</td>
       <td class="date-cell">${(t.completed_at||"").slice(0,10)} <span style="color:var(--green)">✓</span> ${t.completed_by ? "("+t.completed_by+")":""}</td>
     </tr>`).join("") : `<tr><td colspan="6" style="color:var(--muted)">Žádné položky pro vybraný filtr.</td></tr>`;
+  vophLoadThumbnails();
 }
 
 /* ============================================================
