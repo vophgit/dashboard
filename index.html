@@ -87,6 +87,9 @@
 
   table.data{width:100%; border-collapse:collapse; font-size:13px;}
   table.data th{text-align:left; padding:9px 10px; background:var(--brand-soft); color:var(--brand-dark); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.03em; position:sticky; top:0;}
+  table.data th.sortable{cursor:pointer; user-select:none;}
+  table.data th.sortable:hover{background:var(--brand-softer); text-decoration:underline;}
+  .sort-icon{display:inline-block; margin-left:4px; font-size:10px; opacity:.7;}
   table.data td{padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:top;}
   table.data tr:hover td{background:var(--brand-softer);}
   .tag{display:inline-block; padding:2px 7px; border-radius:5px; font-size:11px; font-weight:600; background:var(--brand-soft); color:var(--brand-dark); margin:1px 2px 1px 0;}
@@ -216,7 +219,10 @@
       <div class="count-badge" id="taskCount"></div>
       <div class="table-scroll">
         <table class="data">
-          <thead><tr><th>Úkol</th><th>Kdo</th><th>Sekce</th><th>Doména</th><th>Vytvořeno</th><th>Termín</th><th>Komentář / Akce</th></tr></thead>
+          <thead><tr><th>Úkol</th><th>Kdo</th><th>Sekce</th><th>Doména</th>
+            <th class="sortable" onclick="vophToggleSort('created')">Vytvořeno<span id="sortIcon-created" class="sort-icon"></span></th>
+            <th class="sortable" onclick="vophToggleSort('due')">Termín<span id="sortIcon-due" class="sort-icon"></span></th>
+            <th>Komentář / Akce</th></tr></thead>
           <tbody id="taskBody"><tr><td colspan="7">Načítám…</td></tr></tbody>
         </table>
       </div>
@@ -432,15 +438,43 @@ function vophRenderSidePanels(){
 }
 
 /* ---------- Filtrování tabulky Úkol ---------- */
+/* ---------- Řazení podle Vytvořeno / Termín — klik přepíná směr ---------- */
+let vophSortField = "due";   // "created" | "due"
+let vophSortDir = "desc";    // "desc" = od nejbližšího (novější/pozdější datum nahoře), "asc" = od nejvzdálenějšího
+
+function vophToggleSort(field){
+  if(vophSortField === field){
+    vophSortDir = (vophSortDir === "desc") ? "asc" : "desc";
+  } else {
+    vophSortField = field;
+    vophSortDir = "desc"; // první klik na nové sloupci = od nejbližšího data
+  }
+  vophRenderTaskTable();
+}
+
+function vophUpdateSortIcons(){
+  ["created","due"].forEach(f => {
+    const el = document.getElementById("sortIcon-"+f);
+    if(!el) return;
+    el.textContent = (f === vophSortField) ? (vophSortDir === "desc" ? "▼" : "▲") : "";
+  });
+}
+
 function vophFilteredTasks(){
   const who = vophWhoAmI();
   const section = document.getElementById("fSection").value;
   const domain = document.getElementById("fDomain").value;
+  const field = vophSortField;
+  const dir = vophSortDir === "desc" ? -1 : 1;
   return openTasks.filter(t =>
     (who==="Všichni" || t.who===who || toArr(t.who).includes(who)) &&
     (!section || toArr(t.block).includes(section)) &&
     (!domain || toArr(t.domain).includes(domain))
-  ).sort((a,b) => (b.due||"9999").localeCompare(a.due||"9999") || (b.created||"").localeCompare(a.created||""));
+  ).sort((a,b) => {
+    const av = a[field] || "0000-00-00";
+    const bv = b[field] || "0000-00-00";
+    return dir * av.localeCompare(bv);
+  });
 }
 
 function vophRenderTaskTable(){
@@ -463,6 +497,7 @@ function vophRenderTaskTable(){
       </td>
       <td>${vophAkceCellHtml(t)}</td>
     </tr>`).join("") : `<tr><td colspan="7" style="color:var(--muted)">Žádné položky pro vybraný filtr.</td></tr>`);
+  vophUpdateSortIcons();
 }
 
 function vophWhoDisplay(t){
@@ -473,16 +508,24 @@ function vophWhoDisplay(t){
 /* ============================================================
    ŘÁDEK „PŘIDAT ÚKOL" — první řádek tabulky Úkol
 ============================================================ */
-let vophAddDraft = { who: TEAM[0], block: ["inbox"], domain: [] };
+let vophAddDraft = { who: null, block: ["inbox"], domain: [], desc: "", due: "" };
+
+function vophAddDraftWho(){
+  if(vophAddDraft.who) return vophAddDraft.who;
+  const who = vophWhoAmI();
+  return (who && who !== "Všichni") ? who : TEAM[0];
+}
 
 function vophAddRowHtml(){
-  const who = vophWhoAmI();
-  const defaultWho = (who && who !== "Všichni") ? who : vophAddDraft.who;
+  const selectedWho = vophAddDraftWho();
   return `
     <tr class="add-row">
-      <td><input type="text" class="add-desc" id="addDesc" placeholder="Popis úkolu…"></td>
+      <td><input type="text" class="add-desc" id="addDesc" placeholder="Popis úkolu…"
+                  value="${vophEsc(vophAddDraft.desc)}" oninput="vophAddDraft.desc = this.value"></td>
       <td>
-        <select id="addWho">${TEAM.map(p => `<option ${p===defaultWho?"selected":""}>${p}</option>`).join("")}</select>
+        <select id="addWho" onchange="vophAddDraft.who = this.value">
+          ${TEAM.map(p => `<option ${p===selectedWho?"selected":""}>${p}</option>`).join("")}
+        </select>
       </td>
       <td class="editable-cell" id="addBlockCell" onclick="vophOpenMultiEditorAdd(this,'block')">
         <div class="tag-list">${vophAddDraft.block.map(b=>`<span class="tag">${SECTION_LABELS[b]||b}</span>`).join("")}</div>
@@ -491,7 +534,8 @@ function vophAddRowHtml(){
         <div class="tag-list">${vophAddDraft.domain.map(d=>`<span class="tag">${vophEsc(d)}</span>`).join("")}</div>
       </td>
       <td class="date-cell" style="color:var(--muted); font-style:italic;">dnes</td>
-      <td><input type="date" id="addDue" placeholder="${todayISO()}"></td>
+      <td><input type="date" id="addDue" value="${vophAddDraft.due}" placeholder="${todayISO()}"
+                  onchange="vophAddDraft.due = this.value"></td>
       <td>
         <button class="add-submit" id="addSubmitBtn" onclick="vophSubmitAddRow()">+ Přidat úkol</button>
         <div class="add-status" id="addStatus"></div>
@@ -521,7 +565,7 @@ async function vophSubmitAddRow(){
   if(ok){
     // Okamžitě zobrazit v tabulce Úkol — nečekat na příští sync
     openTasks.push({ id, created, who, domain, weight:null, block, desc, due, updated: ts });
-    vophAddDraft = { who, block:["inbox"], domain:[] };
+    vophAddDraft = { who: null, block:["inbox"], domain:[], desc:"", due:"" };
     vophRenderAll();
     // Řádek pro přidání se při renderu vytváří znovu — status prvek musí být čerstvý
     document.getElementById("addStatus").textContent = `Přidáno (${id}) — zobrazeno níže. Do repozitáře se zapíše po syncu.`;
