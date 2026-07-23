@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Přehled kontroly — Centrum PH / VOPH.CZ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Poppins:wght@600;700&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     /* Značka VOPH — oficiální oranžová (meta-theme-color na voph.cz) */
@@ -25,12 +25,7 @@
   header.top{background:var(--brand); color:#fff; padding:22px clamp(16px,4vw,40px);}
   header.top h1{color:#fff; font-size:20px; letter-spacing:.2px;}
   header.top .sub{color:#FFE3D1; font-size:12.5px; margin-top:4px;}
-  .head-row{display:flex; align-items:flex-start; justify-content:space-between; gap:16px;}
-  .head-logo-text{
-    font-family:'Poppins',sans-serif; font-weight:700; color:#fff; letter-spacing:.5px;
-    white-space:nowrap; line-height:1; flex-shrink:0; display:flex; align-items:baseline;
-  }
-  .head-logo-text .dim{font-weight:600; opacity:.82;}
+
   .wrap{max-width:1900px; width:100%; margin:0 auto; padding:0 clamp(16px,2.5vw,32px);}
 
   .toolbar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:18px;}
@@ -151,12 +146,9 @@
 
 <header class="top">
   <div class="wrap">
-    <div class="head-row">
-      <div id="headTitleBlock">
-        <h1>Přehled kontroly — Centrum PH / VOPH.CZ</h1>
-        <div class="sub">Zdroj: <span class="mono">vophgit/voph-tasks</span> · <span id="lastLoaded">načítám…</span></div>
-      </div>
-      <div class="head-logo-text" id="headLogoText">VOPH<span class="dim">.CZ</span></div>
+    <div id="headTitleBlock">
+      <h1>Přehled kontroly — Centrum PH / VOPH.CZ</h1>
+      <div class="sub">Zdroj: <span class="mono">vophgit/voph-tasks</span> · <span id="lastLoaded">načítám…</span></div>
     </div>
 
     <div class="toolbar">
@@ -512,22 +504,27 @@ async function vophSubmitAddRow(){
   const status = document.getElementById("addStatus");
   if(!desc){ status.textContent = "Popis nesmí být prázdný."; return; }
   const who = document.getElementById("addWho").value;
-  const due = document.getElementById("addDue").value || todayISO(); // termín = dnešek, pokud nezadáno
+  const created = todayISO();
+  const due = document.getElementById("addDue").value || created; // termín = dnešek, pokud nezadáno
   const block = vophAddDraft.block.length ? vophAddDraft.block : ["inbox"];
   const domain = vophAddDraft.domain;
 
   const btn = document.getElementById("addSubmitBtn");
   btn.disabled = true; status.textContent = "Odesílám…";
   const id = vophGenTaskId();
+  const ts = new Date().toISOString();
   const ok = await vophPushInboxItem({
     action:"add", id, who, domain, block, desc, due,
-    source:"dashboard", ts:new Date().toISOString()
+    source:"dashboard", ts
   });
   btn.disabled = false;
   if(ok){
-    status.textContent = `Přidáno (${id}). Projeví se po syncu.`;
+    // Okamžitě zobrazit v tabulce Úkol — nečekat na příští sync
+    openTasks.push({ id, created, who, domain, weight:null, block, desc, due, updated: ts });
     vophAddDraft = { who, block:["inbox"], domain:[] };
-    vophRenderTaskTable();
+    vophRenderAll();
+    // Řádek pro přidání se při renderu vytváří znovu — status prvek musí být čerstvý
+    document.getElementById("addStatus").textContent = `Přidáno (${id}) — zobrazeno níže. Do repozitáře se zapíše po syncu.`;
   } else {
     status.textContent = "Odeslání selhalo — zkus znovu.";
   }
