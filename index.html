@@ -27,6 +27,12 @@
   header.top .sub{color:#FFE3D1; font-size:12.5px; margin-top:4px;}
   .head-row{display:flex; align-items:flex-start; justify-content:space-between; gap:16px;}
   .head-logo{height:38px; flex-shrink:0;}
+  .head-logo-fallback{
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:22px; color:#fff;
+    letter-spacing:.5px; flex-shrink:0; background:#fff; color:var(--brand);
+    padding:4px 12px; border-radius:6px;
+  }
+  .head-logo-fallback span{font-weight:500;}
   .wrap{max-width:1280px; margin:0 auto; padding:0 clamp(16px,4vw,40px);}
 
   .toolbar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:18px;}
@@ -152,7 +158,8 @@
         <h1>Přehled kontroly — Centrum PH / VOPH.CZ</h1>
         <div class="sub">Zdroj: <span class="mono">vophgit/voph-tasks</span> · <span id="lastLoaded">načítám…</span></div>
       </div>
-      <img class="head-logo" src="https://voph.cz/template/eshop5/special/image/logo.svg" alt="VOPH.CZ">
+      <img class="head-logo" src="https://voph.cz/template/eshop5/special/image/logo.svg" alt="VOPH.CZ"
+           onerror="this.onerror=null; this.outerHTML='<span class=\'head-logo-fallback\'>VOPH<span>.CZ</span></span>';">
     </div>
 
     <div class="toolbar">
@@ -220,8 +227,8 @@
       <div class="count-badge" id="taskCount"></div>
       <div class="table-scroll">
         <table class="data">
-          <thead><tr><th>Úkol</th><th>Kdo</th><th>Sekce</th><th>Doména</th><th>Termín</th><th>Komentář / Akce</th></tr></thead>
-          <tbody id="taskBody"><tr><td colspan="6">Načítám…</td></tr></tbody>
+          <thead><tr><th>Úkol</th><th>Kdo</th><th>Sekce</th><th>Doména</th><th>Vytvořeno</th><th>Termín</th><th>Komentář / Akce</th></tr></thead>
+          <tbody id="taskBody"><tr><td colspan="7">Načítám…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -461,11 +468,12 @@ function vophRenderTaskTable(){
       <td class="editable-cell" onclick="vophOpenMultiEditor(this,'${t.id}','domain')">
         <div class="tag-list">${toArr(t.domain).map(d=>`<span class="tag">${vophEsc(d)}</span>`).join("")}</div>
       </td>
+      <td class="date-cell">${vophEsc(t.created || "—")}</td>
       <td class="editable-cell termin-cell" onclick="vophOpenTerminEditor(this,'${t.id}')">
         <span class="termin-display">${vophEsc(t.due || t.created || "—")}</span>
       </td>
       <td>${vophAkceCellHtml(t)}</td>
-    </tr>`).join("") : `<tr><td colspan="6" style="color:var(--muted)">Žádné položky pro vybraný filtr.</td></tr>`);
+    </tr>`).join("") : `<tr><td colspan="7" style="color:var(--muted)">Žádné položky pro vybraný filtr.</td></tr>`);
 }
 
 function vophWhoDisplay(t){
@@ -493,6 +501,7 @@ function vophAddRowHtml(){
       <td class="editable-cell" id="addDomainCell" onclick="vophOpenMultiEditorAdd(this,'domain')">
         <div class="tag-list">${vophAddDraft.domain.map(d=>`<span class="tag">${vophEsc(d)}</span>`).join("")}</div>
       </td>
+      <td class="date-cell" style="color:var(--muted); font-style:italic;">dnes</td>
       <td><input type="date" id="addDue" placeholder="${todayISO()}"></td>
       <td>
         <button class="add-submit" id="addSubmitBtn" onclick="vophSubmitAddRow()">+ Přidat úkol</button>
