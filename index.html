@@ -344,7 +344,18 @@ function toArr(v){
   if(v === null || v === undefined || v === "") return [];
   return Array.isArray(v) ? v : [v];
 }
-function todayISO(){ return new Date().toISOString().slice(0,10); }
+/* Datum v místním kalendáři (ne UTC) — new Date().toISOString() by kolem půlnoci
+   mohlo ukázat jiný den než je skutečně "dnes" podle časového pásma prohlížeče. */
+function vophLocalISO(d){
+  const pad = n => String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function todayISO(){ return vophLocalISO(new Date()); }
+function tomorrowISO(){
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return vophLocalISO(d);
+}
 
 /* Jednotný formát datumu/času v celém dashboardu: dd/mm/yy_hh:mm
    - Čisté kalendářní datum (YYYY-MM-DD, např. termín/vytvořeno) → dd/mm/yy, BEZ vymýšlení času.
@@ -1139,7 +1150,7 @@ function vophHandleKontrolaClick(btn, id){
     btn.disabled = true; input.disabled = true;
     cell.querySelector(".predat-btn").disabled = true;
     cell.querySelector(".done-btn").disabled = true;
-    vophSubmitReassign(id, [who], input.value.trim());
+    vophSubmitReassign(id, [who], input.value.trim(), false, tomorrowISO());
     delete vophDraftComments[id];
   }
 }
@@ -1170,19 +1181,39 @@ async function vophConfirmHandoff(id, btnEl){
   delete vophDraftComments[id];
 }
 
-async function vophSubmitReassign(id, peopleArr, comment, isHandoff){
+async function vophSubmitReassign(id, peopleArr, comment, isHandoff, newDue){
   const t = openTasks.find(x => x.id === id);
   const handedOffBy = (vophWhoAmI() !== "Všichni") ? vophWhoAmI() : (t ? t.who : null);
   const commentAuthor = handedOffBy || peopleArr[0];
   const ts = new Date().toISOString();
   const comments = (t ? vophGetComments(t) : []).concat([{ text: comment, by: commentAuthor, at: ts }]);
-  if(t){ t.who = peopleArr; t.block = ["next"]; t.comments = comments; }
+
+  let finalWho, finalBlock;
+  if(isHandoff){
+    // Předat: původní vlastník(ci) u úkolu ZŮSTÁVÁ (vidí ho dál ve svém seznamu) + přidají se noví lidé.
+    // Úkol se navíc označí Waiting for (předávající na něj teď čeká), vedle Next steps (nový má co dělat).
+    const existingWho = t ? toArr(t.who) : [];
+    finalWho = [...new Set([...existingWho, ...peopleArr])];
+    finalBlock = ["next", "waiting"];
+  } else {
+    // Kontrola: čisté převzetí pod sebe, beze změny dosavadního chování
+    finalWho = peopleArr;
+    finalBlock = ["next"];
+  }
+
+  if(t){
+    t.who = finalWho; t.block = finalBlock; t.comments = comments;
+    if(newDue) t.due = newDue;
+  }
   vophRenderTaskTable();
-  const payload = { action:"update", id, who: peopleArr, block:["next"], comments, ts };
+  const payload = { action:"update", id, who: finalWho, block: finalBlock, comments, ts };
+  if(newDue) payload.due = newDue;
   if(isHandoff) payload.handed_off_by = handedOffBy;
   const ok = await vophPushInboxItem(payload);
   document.getElementById("syncStatus").textContent = ok
-    ? `Úkol ${id} přesunut do Next steps (${peopleArr.join(", ")}).`
+    ? (isHandoff
+        ? `Úkol ${id} předán (${peopleArr.join(", ")}) — označen jako Next steps + Waiting for.`
+        : `Úkol ${id} přesunut do Next steps (${finalWho.join(", ")}).`)
     : `Odeslání pro ${id} selhalo.`;
 }
 
