@@ -150,6 +150,7 @@
   .comment-line{font-size:11px; color:var(--ink); padding:3px 0; border-top:1px dashed var(--line);}
   .comment-line:first-child{border-top:none;}
   .comment-meta{color:var(--muted); font-style:italic;}
+  .created-by-note{font-size:10.5px; color:var(--muted); margin-top:5px; padding-top:4px; border-top:1px dotted var(--line); font-style:italic;}
   .editable-cell:hover{background:var(--brand-softer);}
   .editable-cell .tag-list:empty::after{content:"— klikni pro výběr —"; color:var(--muted); font-size:11.5px; font-style:italic;}
   .cell-editor{background:#fff; border:1px solid var(--brand); border-radius:6px; padding:6px; font-size:12px; min-width:170px;}
@@ -478,6 +479,21 @@ function vophOnWhoChange(){
 }
 function vophWhoAmI(){ return document.getElementById("whoSelect").value; }
 
+/* Skutečná přihlášená identita (z přístupové brány) — na rozdíl od vophWhoAmI()
+   (což je jen dočasný filtr PROHLÍŽENÍ) tohle vždy říká, kdo fyzicky sedí u prohlížeče.
+   Důležité pro "kdo úkol vytvořil": admin (Nam/Duc) může mít "Kdo jsi" přepnuté na
+   "Všichni" nebo na kohokoli jiného, ale úkol pořád zadává on sám. */
+function vophMyIdentity(){
+  try{
+    const raw = localStorage.getItem("voph_identity");
+    if(raw){
+      const { name } = JSON.parse(raw);
+      if(name) return name;
+    }
+  }catch(e){}
+  return null;
+}
+
 /* ============================================================
    PŘÍSTUPOVÁ BRÁNA — ověření identity a uzamčení výběru osoby
 ============================================================ */
@@ -687,6 +703,7 @@ function vophRenderTaskTable(){
         <button class="priority-btn ${t.priority ? 'active' : ''}" onclick="vophTogglePriority('${t.id}')">★ Priorita</button>
         ${vophAttachmentsHtml(t)}
         ${vophCommentsHtml(t)}
+        ${vophCreatedByHtml(t)}
       </td>
       <td>${vophWhoDisplay(t)}</td>
       <td class="editable-cell" onclick="vophOpenMultiEditor(this,'${t.id}','block')">
@@ -771,19 +788,20 @@ async function vophSubmitAddRow(){
   const due = document.getElementById("addDue").value || created; // termín = dnešek, pokud nezadáno
   const block = vophAddDraft.block.length ? vophAddDraft.block : ["inbox"];
   const domain = vophAddDraft.domain;
+  const createdBy = vophMyIdentity() || ((vophWhoAmI() !== "Všichni") ? vophWhoAmI() : who); // kdo úkol skutečně zadal (může se lišit od "Kdo" = komu patří)
 
   const btn = document.getElementById("addSubmitBtn");
   btn.disabled = true; status.textContent = "Odesílám…";
   const id = vophGenTaskId();
   const ts = new Date().toISOString();
   const ok = await vophPushInboxItem({
-    action:"add", id, who, domain, block, desc, due,
+    action:"add", id, who, domain, block, desc, due, created_by: createdBy,
     source:"dashboard", ts
   });
   btn.disabled = false;
   if(ok){
     // Okamžitě zobrazit v tabulce Úkol — nečekat na příští sync
-    openTasks.push({ id, created, who, domain, weight:null, block, desc, due, updated: ts });
+    openTasks.push({ id, created, who, domain, weight:null, block, desc, due, updated: ts, created_by: createdBy });
     vophAddDraft = { who: null, block:["inbox"], domain:[], desc:"", due:"" };
     vophRenderAll();
     // Řádek pro přidání se při renderu vytváří znovu — status prvek musí být čerstvý
@@ -936,6 +954,16 @@ function vophCommentsHtml(t){
   return `<div class="comments-list">${comments.map(c => `
     <div class="comment-line">💬 ${vophEsc(c.text)}<span class="comment-meta"> — ${vophEsc(c.by||"?")}${c.at ? ", "+vophEsc(vophFormatDateTime(c.at)) : ""}</span></div>
   `).join("")}</div>`;
+}
+
+/* Poznámka na konci obsahu úkolu s tím, kdo ho zadal. Jen pokud to skutečně víme —
+   u starších úkolů bez tohoto pole se nic nedomýšlí ani neukazuje. */
+function vophCreatedByHtml(t){
+  if(!t.created_by && !t.source_email) return "";
+  let html = "";
+  if(t.created_by) html += `<div class="created-by-note">Vytvořil: ${vophEsc(t.created_by)}</div>`;
+  if(t.source_email) html += `<div class="created-by-note">📧 Z e-mailu: ${vophEsc(t.source_email)}</div>`;
+  return html;
 }
 
 /* ============================================================
@@ -1377,7 +1405,8 @@ function vophRenderDoneTable(){
     <tr>
       <td>${t.weight ? `<span class="tag done">${t.weight}</span> `:""}${vophEsc(t.desc)}
         ${(t.attachments && t.attachments.length) ? `<div class="attach-row" style="margin-top:4px;">${t.attachments.map(a => vophAttachmentChipHtml(a, t.id, false)).join("")}</div>` : ""}
-        ${vophCommentsHtml(t)}</td>
+        ${vophCommentsHtml(t)}
+        ${vophCreatedByHtml(t)}</td>
       <td>${vophWhoDisplay(t)}</td>
       <td>${toArr(t.block).map(b=>SECTION_LABELS[b]||b).join(", ") || "—"}</td>
       <td>${toArr(t.domain).join(", ") || "—"}</td>
