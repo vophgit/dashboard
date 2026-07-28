@@ -23,6 +23,30 @@
   a{color:var(--brand-dark);}
 
   header.top{background:var(--brand); color:#fff; padding:22px clamp(16px,4vw,40px);}
+
+  #loginGate{
+    position:fixed; inset:0; z-index:1000; background:var(--brand);
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .login-card{
+    background:#fff; border-radius:14px; padding:34px 30px; width:100%; max-width:340px;
+    box-shadow:0 10px 40px rgba(0,0,0,.25); text-align:center;
+  }
+  .login-card h1{font-size:20px; color:var(--brand-dark);}
+  .login-card .sub{color:var(--muted); font-size:12.5px;}
+  .login-label{display:block; text-align:left; font-size:12px; color:var(--muted); margin:14px 0 4px;}
+  .login-card select, .login-card input{
+    width:100%; font:inherit; font-size:14px; padding:9px 10px; border-radius:8px;
+    border:1px solid var(--line); box-sizing:border-box;
+  }
+  .login-submit{
+    width:100%; margin-top:20px; padding:10px; border-radius:8px; border:none;
+    background:var(--brand); color:#fff; font-weight:700; font-size:14px; cursor:pointer;
+  }
+  .login-submit:hover{filter:brightness(1.05);}
+  .login-error{color:var(--red); font-size:12.5px; margin-top:10px; min-height:16px;}
+  .change-user-link{color:#FFE3D1; font-size:12px; cursor:pointer; text-decoration:underline; margin-left:6px;}
+  .change-user-link:hover{color:#fff;}
   header.top h1{color:#fff; font-size:20px; letter-spacing:.2px;}
   header.top .sub{color:#FFE3D1; font-size:12.5px; margin-top:4px;}
 
@@ -193,6 +217,21 @@
 </head>
 <body>
 
+<div id="loginGate">
+  <div class="login-card">
+    <h1>Přehled kontroly</h1>
+    <div class="sub" style="margin-bottom:18px;">Centrum PH / VOPH.CZ</div>
+    <label class="login-label">Kdo jsi?</label>
+    <select id="gateWho">
+      <option value="" disabled selected>— vyber —</option>
+      <option>Nam</option><option>Duc</option><option>Marcel</option>
+      <option>Míša</option><option>Kristý</option><option>Vítek</option>
+    </select>
+    <button class="login-submit" onclick="vophGateSubmit()">Vstoupit</button>
+    <div class="login-error" id="gateError"></div>
+  </div>
+</div>
+
 <header class="top">
   <div class="wrap">
     <div id="headTitleBlock">
@@ -208,6 +247,7 @@
         <option>Duc</option><option>Marcel</option><option>Míša</option>
         <option>Kristý</option><option>Nam</option><option>Vítek</option>
       </select>
+      <span class="change-user-link" id="changeUserLink" onclick="vophLogout()" style="display:none;">🔒 Změnit uživatele</span>
     </div>
     <div class="sync-status" id="syncStatus"></div>
 
@@ -329,6 +369,14 @@
 const VOPH_OWNER = "vophgit";
 const VOPH_REPO  = "voph-tasks";
 const TEAM = ["Duc","Marcel","Míša","Kristý","Nam","Vítek"];
+
+/* ============================================================
+   PŘÍSTUPOVÁ BRÁNA — Nam a Duc bez omezení (mohou přepínat kohokoli).
+   Ostatní si jen vyberou svoje jméno a dashboard se jim natrvalo uzamkne
+   jen na jejich osobu (bez možnosti přepnout na někoho jiného).
+   POZOR: toto je jen UI zámek proti omylem/zvědavému přepnutí, ne skutečné
+   zabezpečení — token má stejně přístup ke všem datům v repu. */
+const VOPH_ADMINS = ["Nam", "Duc"];
 const SECTION_LABELS = {
   inbox:"Inbox", projects:"Projects", next:"Next steps", easy:"Next steps – easy",
   waiting:"Waiting for", platby:"Platby", someday:"Some other time"
@@ -428,14 +476,58 @@ function vophOnWhoChange(){
   localStorage.setItem("voph_who_am_i", document.getElementById("whoSelect").value);
   vophRenderAll();
 }
-(function initWho(){
-  const saved = localStorage.getItem("voph_who_am_i");
-  if(saved){
-    const sel = document.getElementById("whoSelect");
-    if([...sel.options].some(o=>o.value===saved)) sel.value = saved;
-  }
-})();
 function vophWhoAmI(){ return document.getElementById("whoSelect").value; }
+
+/* ============================================================
+   PŘÍSTUPOVÁ BRÁNA — ověření identity a uzamčení výběru osoby
+============================================================ */
+
+async function vophGateSubmit(){
+  const name = document.getElementById("gateWho").value;
+  const errEl = document.getElementById("gateError");
+  if(!name){ errEl.textContent = "Vyber, kdo jsi."; return; }
+  vophCompleteLogin(name, VOPH_ADMINS.includes(name));
+}
+
+function vophCompleteLogin(name, isAdmin){
+  localStorage.setItem("voph_identity", JSON.stringify({ name, isAdmin }));
+  document.getElementById("loginGate").style.display = "none";
+  vophApplyIdentityLock(name, isAdmin);
+  vophStartApp();
+}
+
+function vophLogout(){
+  localStorage.removeItem("voph_identity");
+  location.reload();
+}
+
+/* Pro ne-adminy: "Kdo jsi" nahoře se zamkne jen na jejich jméno, bez možnosti přepnout. */
+function vophApplyIdentityLock(name, isAdmin){
+  const sel = document.getElementById("whoSelect");
+  if(isAdmin){
+    const saved = localStorage.getItem("voph_who_am_i");
+    if(saved && [...sel.options].some(o => o.value === saved)) sel.value = saved;
+    document.getElementById("changeUserLink").style.display = "inline";
+  } else {
+    sel.innerHTML = `<option value="${name}" selected>${name}</option>`;
+    sel.disabled = true;
+    localStorage.setItem("voph_who_am_i", name);
+    document.getElementById("changeUserLink").style.display = "inline";
+  }
+}
+
+/* Při načtení stránky: už ověřená identita v tomto prohlížeči? Přeskoč bránu. */
+(function vophCheckIdentityOnLoad(){
+  const raw = localStorage.getItem("voph_identity");
+  if(!raw){ return; } // brána zůstane zobrazená (výchozí stav v HTML)
+  try{
+    const { name, isAdmin } = JSON.parse(raw);
+    if(!name) return;
+    document.getElementById("loginGate").style.display = "none";
+    vophApplyIdentityLock(name, isAdmin);
+    vophStartApp();
+  }catch(e){ /* poškozený záznam — necháme zobrazenou bránu */ }
+})();
 
 /* ============================================================
    FILTRY — naplnění selectů
@@ -1341,9 +1433,11 @@ async function vophSyncNow(){
 }
 
 /* ============================================================
-   START
+   START — volá se JEN po úspěšném ověření identity (viz přístupová brána výše)
 ============================================================ */
-vophLoadAll();
+function vophStartApp(){
+  vophLoadAll();
+}
 </script>
 </body>
 </html>
