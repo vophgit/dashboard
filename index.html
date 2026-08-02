@@ -281,6 +281,10 @@
       <div class="side-body" id="panelOverdue"></div>
     </div>
     <div class="side-panel">
+      <h3>Otevřené úkoly podle osoby</h3>
+      <div class="side-body"><table class="mini-table" id="openByPersonTable"><tbody></tbody></table></div>
+    </div>
+    <div class="side-panel">
       <h3>Hotovo podle osoby</h3>
       <div class="side-body"><table class="mini-table" id="doneByPersonTable"><tbody></tbody></table></div>
     </div>
@@ -575,6 +579,7 @@ function vophPopulateFilterOptions(){
 function vophRenderAll(){
   vophRenderStats();
   vophRenderSidePanels();
+  vophRenderOpenByPerson();
   vophRenderTaskTable();
   vophRenderDoneByPerson();
   vophRenderDoneTable();
@@ -1371,9 +1376,18 @@ function vophEscJs(s){
 }
 
 /* ---------- Hotovo podle osoby (bez filtrů) ---------- */
+function vophRenderOpenByPerson(){
+  const counts = {};
+  openTasks.forEach(t => toArr(t.who).forEach(p => counts[p] = (counts[p]||0)+1));
+  const rows = Object.entries(counts).sort((a,b)=>b[1]-a[1])
+    .map(([k,v]) => `<tr><td>${k}</td><td class="n">${v}</td></tr>`).join("");
+  document.getElementById("openByPersonTable").innerHTML =
+    `<thead><tr><th>Osoba</th><th style="text-align:right">Počet</th></tr></thead><tbody>${rows || '<tr><td colspan="2" style="color:var(--muted)">Žádné položky.</td></tr>'}</tbody>`;
+}
+
 function vophRenderDoneByPerson(){
   const counts = {};
-  doneTasks.forEach(t => counts[t.who] = (counts[t.who]||0)+1);
+  doneTasks.forEach(t => toArr(t.who).forEach(p => counts[p] = (counts[p]||0)+1));
   const rows = Object.entries(counts).sort((a,b)=>b[1]-a[1])
     .map(([k,v]) => `<tr><td>${k}</td><td class="n">${v}</td></tr>`).join("");
   document.getElementById("doneByPersonTable").innerHTML =
