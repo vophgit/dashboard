@@ -260,9 +260,85 @@
   .pnew-people{display:flex; flex-wrap:wrap; gap:10px; font-size:12.5px; align-items:center; margin-bottom:10px;}
   .pnew-people label{display:flex; gap:4px; align-items:center; cursor:pointer;}
   .porada-empty{font-size:12.5px; color:var(--muted); padding:6px 0;}
+
+  /* ============================================================
+     NOTIFIKACE — plovoucí zvoneček v levém horním rohu obrazovky
+     ============================================================ */
+  #notifDock{position:fixed; top:12px; left:12px; z-index:900; display:none;}
+  #notifBell{
+    position:relative; width:54px; height:54px; border-radius:50%; border:none; cursor:pointer;
+    background:#fff; color:var(--brand-dark); font-size:25px; line-height:1;
+    box-shadow:0 4px 16px rgba(0,0,0,.28); display:flex; align-items:center; justify-content:center;
+    transition:transform .12s ease;
+  }
+  #notifBell:hover{transform:scale(1.06);}
+  #notifBell.has-unread{background:var(--brand); color:#fff;}
+  #notifBadge{
+    position:absolute; top:-4px; right:-4px; min-width:23px; height:23px; padding:0 5px;
+    border-radius:12px; background:var(--red); color:#fff; font-family:'Space Grotesk',sans-serif;
+    font-size:12.5px; font-weight:700; display:none; align-items:center; justify-content:center;
+    border:2px solid #fff; box-sizing:border-box;
+  }
+  #notifBadge.on{display:flex;}
+  #notifPanel{
+    display:none; position:absolute; top:62px; left:0; width:min(400px, calc(100vw - 24px));
+    background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden;
+    box-shadow:0 12px 40px rgba(0,0,0,.25);
+  }
+  #notifPanel.open{display:block;}
+  .notif-head{
+    background:var(--brand-soft); padding:10px 14px; display:flex; align-items:center;
+    justify-content:space-between; gap:8px;
+  }
+  .notif-head b{font-family:'Space Grotesk',sans-serif; color:var(--brand-dark); font-size:13.5px;}
+  .notif-markall{
+    font-size:11.5px; color:var(--brand-dark); background:none; border:none; cursor:pointer;
+    text-decoration:underline; padding:0; font-family:inherit;
+  }
+  .notif-markall:hover{color:var(--ink);}
+  .notif-list{max-height:min(70vh,560px); overflow:auto;}
+  .notif-item{
+    padding:9px 14px; border-top:1px solid var(--line); cursor:pointer; display:flex; gap:9px;
+    align-items:flex-start; background:var(--brand-softer);
+  }
+  .notif-item:first-child{border-top:none;}
+  .notif-item:hover{background:var(--brand-soft);}
+  .notif-item.read{background:#fff; opacity:.62;}
+  .notif-item.read:hover{opacity:1; background:var(--brand-softer);}
+  .notif-ico{font-size:14px; line-height:1.4; flex:0 0 auto;}
+  .notif-body{min-width:0; flex:1;}
+  .notif-title{font-size:12.5px; color:var(--ink); line-height:1.35;}
+  .notif-title .notif-kind{font-weight:700; color:var(--brand-dark);}
+  .notif-snippet{font-size:12px; color:var(--navy); margin-top:2px; font-style:italic;}
+  .notif-meta{font-size:11px; color:var(--muted); margin-top:3px;}
+  .notif-empty{padding:16px 14px; font-size:12.5px; color:var(--muted);}
+  .notif-dot{flex:0 0 auto; width:7px; height:7px; border-radius:50%; background:var(--brand); margin-top:6px;}
+  .notif-item.read .notif-dot{background:transparent;}
+  /* Zvýraznění řádku v tabulce Úkol po prokliku z notifikace */
+  @keyframes vophRowFlash{
+    0%,100%{background:transparent;}
+    12%,62%{background:var(--brand-soft);}
+  }
+  tr.row-flash > td{animation:vophRowFlash 2.6s ease-out;}
+  /* Aby zvoneček nepřekrýval nadpis v hlavičce */
+  @media (max-width:1990px){ header.top > .wrap{padding-left:80px;} }
 </style>
 </head>
 <body>
+
+<!-- NOTIFIKACE — plovoucí zvoneček (levý horní roh obrazovky) -->
+<div id="notifDock">
+  <button id="notifBell" onclick="vophNotifToggle(event)" title="Upozornění">
+    🔔<span id="notifBadge"></span>
+  </button>
+  <div id="notifPanel">
+    <div class="notif-head">
+      <b>Upozornění</b>
+      <button class="notif-markall" onclick="vophNotifMarkAllRead(event)">Označit vše jako přečtené</button>
+    </div>
+    <div class="notif-list" id="notifList"></div>
+  </div>
+</div>
 
 <div id="loginGate">
   <div class="login-card">
@@ -476,6 +552,210 @@ const PORADY_DONE_DIR = "porady-hotove";
 let porady = [];
 let vophPoradaBusy = false;
 
+/* ============================================================
+   NOTIFIKACE — nový úkol pro mě + nový komentář u úkolu, kterého se týkám
+   ------------------------------------------------------------
+   Zdroj dat: task-all.jsonl (žádný extra soubor v repu není potřeba).
+   Stav "přečteno" se drží v localStorage per osoba — je to tedy stav
+   prohlížeče, ne repozitáře (jiný počítač = vlastní stav).
+============================================================ */
+const NOTIF_WINDOW_DAYS = 7;   // starší události už neupozorňují
+const NOTIF_MAX_ROWS = 60;     // kolik položek se maximálně vypíše v dropdownu
+
+/* Kdo jsem pro účely upozornění — vždy skutečná přihlášená identita.
+   (Admin si může "Kdo jsi" přepnout na jinou osobu, upozornění ale patří jemu.) */
+function vophNotifMe(){
+  return vophMyIdentity() || (vophWhoAmI && vophWhoAmI() !== "Všichni" ? vophWhoAmI() : null);
+}
+
+/* "Claude (Nam)" → "Nam"; "Marcel" → "Marcel". Autor v závorce = kdo za tím reálně stojí. */
+function vophNotifAuthor(s){
+  const str = String(s || "").trim();
+  const m = str.match(/\(([^)]+)\)\s*$/);
+  return m ? m[1].trim() : str;
+}
+
+/* who může být pole, jedno jméno, nebo výjimečně "Duc/Marcel" */
+function vophNotifPeople(v){
+  const out = [];
+  toArr(v).forEach(x => String(x).split(/[\/,]/).forEach(n => { const s = n.trim(); if(s) out.push(s); }));
+  return out;
+}
+
+function vophNotifReadKey(){ return "voph_notif_read_" + (vophNotifMe() || "anon"); }
+function vophNotifReadSet(){
+  try{ return new Set(JSON.parse(localStorage.getItem(vophNotifReadKey()) || "[]")); }
+  catch(e){ return new Set(); }
+}
+function vophNotifSaveRead(set){
+  // strop, ať localStorage nebobtná donekonečna
+  localStorage.setItem(vophNotifReadKey(), JSON.stringify([...set].slice(-4000)));
+}
+
+function vophNotifTs(value, fallbackDate){
+  if(value){
+    const t = Date.parse(value.includes("T") ? value : value + "T09:00:00");
+    if(!isNaN(t)) return t;
+  }
+  if(fallbackDate){
+    const t = Date.parse(fallbackDate + "T09:00:00");
+    if(!isNaN(t)) return t;
+  }
+  return 0;
+}
+
+function vophNotifShorten(s, n){
+  const str = String(s || "").replace(/\s+/g, " ").trim();
+  return str.length > n ? str.slice(0, n - 1) + "…" : str;
+}
+
+/* Sestaví seznam upozornění pro přihlášenou osobu. */
+function vophBuildNotifications(){
+  const me = vophNotifMe();
+  if(!me) return [];
+  const cutoff = Date.now() - NOTIF_WINDOW_DAYS * 86400000;
+  const out = [];
+
+  openTasks.forEach(t => {
+    const owners = vophNotifPeople(t.who);
+    const creator = vophNotifAuthor(t.created_by);
+    const mine = owners.includes(me);
+
+    /* 1) Nový úkol, který mi někdo jiný zadal */
+    if(mine && t.created_by && creator !== me){
+      const ts = vophNotifTs(t.created, t.created);
+      if(ts >= cutoff){
+        out.push({ key: t.id + "|new", id: t.id, ts, kind: "task", ico: "🆕",
+                   label: "Nový úkol pro tebe", who: t.created_by,
+                   snippet: vophNotifShorten(t.desc, 110) });
+      }
+    }
+
+    /* 2) Nový komentář u úkolu, který je můj (nebo jsem ho zadal) */
+    if(mine || creator === me){
+      vophGetComments(t).forEach((c, i) => {
+        const by = vophNotifAuthor(c.by);
+        if(!by || by === me) return;                 // vlastní komentář neupozorňuje
+        const ts = vophNotifTs(c.at, t.created);
+        if(ts < cutoff) return;
+        out.push({ key: t.id + "|c|" + (c.at || i), id: t.id, ts, kind: "comment", ico: "💬",
+                   label: "Nový komentář", who: c.by || "?",
+                   snippet: vophNotifShorten(c.text, 110),
+                   task: vophNotifShorten(t.desc, 70) });
+      });
+    }
+  });
+
+  const read = vophNotifReadSet();
+  out.forEach(n => { n.read = read.has(n.key); });
+  // nepřečtené nahoru, uvnitř skupin od nejnovějšího
+  out.sort((a, b) => (a.read === b.read) ? (b.ts - a.ts) : (a.read ? 1 : -1));
+  return out.slice(0, NOTIF_MAX_ROWS);
+}
+
+let vophNotifCache = [];
+
+function vophRenderNotifications(){
+  const dock = document.getElementById("notifDock");
+  if(!dock) return;
+  dock.style.display = vophNotifMe() ? "block" : "none";
+
+  vophNotifCache = vophBuildNotifications();
+  const unread = vophNotifCache.filter(n => !n.read).length;
+
+  const badge = document.getElementById("notifBadge");
+  badge.textContent = unread > 99 ? "99+" : String(unread);
+  badge.classList.toggle("on", unread > 0);
+  document.getElementById("notifBell").classList.toggle("has-unread", unread > 0);
+
+  const list = document.getElementById("notifList");
+  if(!vophNotifCache.length){
+    list.innerHTML = `<div class="notif-empty">Žádná upozornění za posledních ${NOTIF_WINDOW_DAYS} dní.</div>`;
+    return;
+  }
+  list.innerHTML = vophNotifCache.map(n => `
+    <div class="notif-item ${n.read ? "read" : ""}" onclick="vophNotifOpen('${vophEscJs(n.key)}')">
+      <span class="notif-dot"></span>
+      <span class="notif-ico">${n.ico}</span>
+      <span class="notif-body">
+        <span class="notif-title"><span class="notif-kind">${n.label}</span>${n.task ? " — " + vophEsc(n.task) : ""}</span>
+        <div class="notif-snippet">${n.kind === "comment" ? "„" + vophEsc(n.snippet) + "“" : vophEsc(n.snippet)}</div>
+        <div class="notif-meta">${vophEsc(n.who)} · ${vophEsc(vophFormatDateTime(new Date(n.ts).toISOString()))} · <span class="mono">${n.id}</span></div>
+      </span>
+    </div>`).join("");
+}
+
+function vophNotifToggle(ev){
+  if(ev) ev.stopPropagation();
+  const panel = document.getElementById("notifPanel");
+  const opening = !panel.classList.contains("open");
+  if(opening) vophRenderNotifications();
+  panel.classList.toggle("open", opening);
+}
+
+function vophNotifClose(){
+  const panel = document.getElementById("notifPanel");
+  if(panel) panel.classList.remove("open");
+}
+
+/* Klik mimo panel ho zavře */
+document.addEventListener("click", ev => {
+  const dock = document.getElementById("notifDock");
+  if(dock && !dock.contains(ev.target)) vophNotifClose();
+});
+
+function vophNotifMarkAllRead(ev){
+  if(ev) ev.stopPropagation();
+  const read = vophNotifReadSet();
+  vophBuildNotifications().forEach(n => read.add(n.key));
+  vophNotifSaveRead(read);
+  vophRenderNotifications();
+}
+
+/* Klik na řádek upozornění: označí přečtené a skočí na daný úkol v sekci Úkol. */
+function vophNotifOpen(key){
+  const n = vophNotifCache.find(x => x.key === key);
+
+  const read = vophNotifReadSet();
+  read.add(key);
+  vophNotifSaveRead(read);
+  vophNotifClose();
+
+  if(!n){ vophRenderNotifications(); return; }
+
+  // Filtry v tabulce Úkol vynulovat, ať úkol není náhodou schovaný
+  ["fSearch","fSection","fDomain","fDueFrom","fDueTo"].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.value = "";
+  });
+  // Admin může mít "Kdo jsi" přepnuté na někoho jiného — pak by se úkol nezobrazil
+  const sel = document.getElementById("whoSelect");
+  const task = openTasks.find(t => t.id === n.id);
+  if(sel && !sel.disabled && task && sel.value !== "Všichni" && !vophNotifPeople(task.who).includes(sel.value)){
+    sel.value = "Všichni";
+    localStorage.setItem("voph_who_am_i", "Všichni");
+    vophRenderAll();
+  } else {
+    vophRenderTaskTable();
+    vophRenderNotifications();
+  }
+
+  // Doskrolovat a bliknout řádkem
+  setTimeout(() => {
+    const row = document.querySelector(`#taskBody tr[data-id="${n.id}"]`);
+    if(row){
+      row.scrollIntoView({ behavior:"smooth", block:"center" });
+      row.classList.remove("row-flash");
+      void row.offsetWidth;          // restart animace
+      row.classList.add("row-flash");
+      setTimeout(() => row.classList.remove("row-flash"), 3000);
+    } else {
+      const panel = document.getElementById("ukolPanel");
+      if(panel) panel.scrollIntoView({ behavior:"smooth", block:"start" });
+    }
+  }, 60);
+}
+
 /* Normalizace: block/domain/who mohou být string (starší data) i pole (nová) */
 function toArr(v){
   if(v === null || v === undefined || v === "") return [];
@@ -662,6 +942,7 @@ function vophPopulateFilterOptions(){
    VYKRESLENÍ
 ============================================================ */
 function vophRenderAll(){
+  vophRenderNotifications();
   vophRenderPorady();
   vophRenderStats();
   vophRenderSidePanels();
@@ -1990,6 +2271,7 @@ async function vophPoradaFinish(btn, mId){
    START — volá se JEN po úspěšném ověření identity (viz přístupová brána výše)
 ============================================================ */
 function vophStartApp(){
+  vophRenderNotifications();
   vophLoadAll();
 }
 </script>
