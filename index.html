@@ -214,6 +214,52 @@
   .checklist li::before{content:"☐"; color:var(--brand);}
 
   footer{margin:40px 0 30px; text-align:center; font-size:12px; color:var(--muted);}
+
+  /* ---------- PORADY ---------- */
+  .porada{border:1px solid var(--line); border-radius:var(--radius); margin-bottom:14px; overflow:hidden; background:#fff;}
+  .porada-head{background:var(--brand-softer); padding:10px 12px; display:flex; gap:9px; align-items:flex-start;}
+  .porada-head-main{flex:1; min-width:0;}
+  .porada-title{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px; color:var(--brand-dark); cursor:text; display:inline-block;}
+  .porada.is-done .porada-title{text-decoration:line-through; color:var(--muted);}
+  .porada-meta{font-size:12px; color:var(--muted); margin-top:3px; display:flex; flex-wrap:wrap; gap:12px;}
+  .porada-meta em{font-style:normal; cursor:pointer; border-bottom:1px dotted var(--line);}
+  .porada-meta em:hover{color:var(--brand-dark); border-bottom-color:var(--brand);}
+  .porada-note{font-size:12.5px; color:var(--ink); margin-top:5px; cursor:text; white-space:pre-wrap;}
+  .porada-note.empty{color:var(--muted); font-style:italic;}
+  .porada-items{padding:4px 12px 10px 12px;}
+  .porada-item{display:flex; gap:8px; align-items:flex-start; padding:6px 0; border-top:1px solid var(--line);}
+  .porada-item:first-child{border-top:none;}
+  .porada-item .branch{color:var(--muted); font-family:'JetBrains Mono',monospace; user-select:none; font-size:12px; margin-top:1px;}
+  .porada-item .it-text{flex:1; min-width:0; cursor:text; font-size:13px; white-space:pre-wrap; word-break:break-word;}
+  .porada-item.is-done .it-text{text-decoration:line-through; color:var(--muted);}
+  .pchk{width:17px; height:17px; flex:0 0 17px; border:1.5px solid var(--brand); border-radius:4px; background:#fff; cursor:pointer;
+        display:inline-flex; align-items:center; justify-content:center; font-size:11px; line-height:1; color:#fff; margin-top:2px; padding:0;}
+  .pchk:hover{border-color:var(--brand-dark);}
+  .pchk.on{background:var(--green); border-color:var(--green);}
+  .pkom{font:inherit; font-size:12px; padding:4px 8px; border-radius:6px; border:1px solid var(--line); background:#fff; width:200px; flex:0 0 200px; color:var(--ink);}
+  .pkom::placeholder{color:#9AA5B1;}
+  .pkom:focus{outline:none; border-color:var(--brand);}
+  .porada-newitem{display:flex; gap:8px; align-items:center; padding:8px 0 0; border-top:1px dashed var(--line); margin-top:4px;}
+  .porada-newitem input{flex:1; font:inherit; font-size:13px; padding:6px 9px; border-radius:6px; border:1px dashed var(--line); background:var(--brand-softer); color:var(--ink);}
+  .porada-newitem input:focus{outline:none; border-style:solid; border-color:var(--brand); background:#fff;}
+  .porada-foot{display:flex; gap:9px; align-items:center; flex-wrap:wrap; padding:0 12px 12px;}
+  .btn-porada{font:inherit; font-size:12px; padding:6px 12px; border-radius:6px; border:1px solid var(--line); background:#fff; cursor:pointer; color:var(--ink);}
+  .btn-porada:hover{background:var(--brand-softer);}
+  .btn-porada.primary{background:var(--brand); border-color:var(--brand); color:#fff; font-weight:600;}
+  .btn-porada.primary:hover{filter:brightness(1.05); background:var(--brand);}
+  .btn-porada:disabled{opacity:.55; cursor:default;}
+  .porada-status{font-size:12px; color:var(--muted);}
+  .pedit{font:inherit; font-size:13px; padding:5px 8px; border-radius:6px; border:1px solid var(--brand); width:100%; color:var(--ink);}
+  .pedit:focus{outline:none;}
+  .pnew-form{border:1px dashed var(--brand); border-radius:var(--radius); padding:12px; margin-bottom:14px; display:none; background:var(--brand-softer);}
+  .pnew-form.open{display:block;}
+  .pnew-row{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:8px;}
+  .pnew-row input[type=text], .pnew-row input[type=datetime-local]{font:inherit; font-size:13px; padding:7px 9px; border-radius:6px; border:1px solid var(--line); background:#fff; color:var(--ink);}
+  .pnew-row input.pnew-title{flex:1 1 260px; min-width:200px; font-weight:600;}
+  .pnew-row input.pnew-note{flex:1 1 100%;}
+  .pnew-people{display:flex; flex-wrap:wrap; gap:10px; font-size:12.5px; align-items:center; margin-bottom:10px;}
+  .pnew-people label{display:flex; gap:4px; align-items:center; cursor:pointer;}
+  .porada-empty{font-size:12.5px; color:var(--muted); padding:6px 0;}
 </style>
 </head>
 <body>
@@ -294,6 +340,38 @@
 
   <section id="statsSection">
     <div class="grid-stats" id="statsGrid"><div class="stat"><div class="num">…</div><div class="lbl">načítám</div></div></div>
+  </section>
+
+  <!-- PORADA — probíhající a nadcházející porady (viditelné jen účastníkům; Nam/Duc vidí vše) -->
+  <section class="panel" id="poradaPanel">
+    <div class="panel-head">
+      <h2>Porady</h2>
+      <div class="desc">Nadcházející a probíhající porady. Vše lze upravit kliknutím. Po dokončení se zápis uloží do <span class="mono">porady-hotove/</span> a porada zmizí z přehledu.</div>
+    </div>
+    <div class="panel-body">
+      <div style="margin-bottom:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <button class="btn-porada primary" id="poradaNewBtn" onclick="vophPoradaToggleNew()">+ Nová porada</button>
+        <span class="porada-status" id="poradaStatus"></span>
+      </div>
+
+      <div class="pnew-form" id="poradaNewForm">
+        <div class="pnew-row">
+          <input type="text" class="pnew-title" id="pnewTitle" placeholder="Název porady (povinné)">
+          <input type="datetime-local" id="pnewWhen">
+        </div>
+        <div class="pnew-row">
+          <input type="text" class="pnew-note" id="pnewNote" placeholder="Obsah / kontext porady (nepovinné)">
+        </div>
+        <div class="pnew-people" id="pnewPeople"></div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button class="btn-porada primary" id="pnewSubmit" onclick="vophPoradaCreate()">Založit poradu</button>
+          <button class="btn-porada" onclick="vophPoradaToggleNew()">Zrušit</button>
+          <span class="porada-status" id="pnewStatus"></span>
+        </div>
+      </div>
+
+      <div id="poradaList"><div class="porada-empty">Načítám…</div></div>
+    </div>
   </section>
 
   <!-- ÚKOL (obsahuje i řádek pro přidání nového úkolu jako první řádek tabulky) -->
@@ -392,6 +470,12 @@ const DOMAINS = ["Sales - B2B","Sales - 70","Logistika - 70","Logistika - B2B","
 let openTasks = [];
 let doneTasks = [];
 
+/* PORADY — stav a konstanty (musí být nahoře: vophLoadAll se volá dřív, než skript doběhne) */
+const PORADY_FILE = "porady.jsonl";
+const PORADY_DONE_DIR = "porady-hotove";
+let porady = [];
+let vophPoradaBusy = false;
+
 /* Normalizace: block/domain/who mohou být string (starší data) i pole (nová) */
 function toArr(v){
   if(v === null || v === undefined || v === "") return [];
@@ -465,9 +549,10 @@ async function vophFetchJsonl(path){
 
 async function vophLoadAll(){
   document.getElementById("lastLoaded").textContent = "načítám…";
-  [openTasks, doneTasks] = await Promise.all([
+  [openTasks, doneTasks, porady] = await Promise.all([
     vophFetchJsonl("task-all.jsonl"),
-    vophFetchJsonl("completions-log.jsonl")
+    vophFetchJsonl("completions-log.jsonl"),
+    vophPoradyLoad()
   ]);
   document.getElementById("lastLoaded").textContent = "aktualizováno " + vophFormatDateTime(new Date().toISOString());
   vophPopulateFilterOptions();
@@ -577,6 +662,7 @@ function vophPopulateFilterOptions(){
    VYKRESLENÍ
 ============================================================ */
 function vophRenderAll(){
+  vophRenderPorady();
   vophRenderStats();
   vophRenderSidePanels();
   vophRenderOpenByPerson();
@@ -1370,6 +1456,10 @@ async function vophPushInboxItem(payload){
 function vophEsc(s){
   const d = document.createElement("div"); d.textContent = s||""; return d.innerHTML;
 }
+/* Escapování do hodnoty HTML atributu (navíc uvozovky, které vophEsc neřeší) */
+function vophEscAttr(s){
+  return vophEsc(s).replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
 /* Escapování pro vložení do onclick="...('...')" — chrání proti apostrofu v názvu souboru */
 function vophEscJs(s){
   return String(s||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'");
@@ -1473,6 +1563,427 @@ async function vophSyncNow(){
   await vophLoadAll();
   btn.disabled = false; btn.innerHTML = original;
   status.textContent = "Synchronizováno a načteno.";
+}
+
+
+/* ============================================================
+   PORADY
+   Data: porady.jsonl v repu voph-tasks (jeden řádek = jedna porada).
+   Zápis jde napřímo přes Contents API se SHA (ne přes inbox/), aby se
+   změny projevily okamžitě i pro ostatní — porada je živý společný dokument.
+   Po dokončení: zápis do porady-hotove/<datum>-<nazev>-<id>.txt a řádek
+   se z porady.jsonl odstraní. Claude pak zápis přečte a navrhne úkoly.
+============================================================ */
+
+function vophPoradaStatus(msg){
+  const el = document.getElementById("poradaStatus");
+  if(el) el.textContent = msg || "";
+}
+
+function vophPoradaGenId(prefix){
+  const d = new Date();
+  const pad = n => String(n).padStart(2,"0");
+  return `${prefix}-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${Math.random().toString(16).slice(2,6)}`;
+}
+
+function vophPoradaSlug(s){
+  return String(s||"porada")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,60) || "porada";
+}
+
+function vophB64Encode(str){ return btoa(unescape(encodeURIComponent(str))); }
+function vophB64Decode(b64){ return decodeURIComponent(escape(atob(String(b64).replace(/\s/g,"")))); }
+
+/* ---------- načtení ---------- */
+async function vophPoradyLoad(){
+  const token = vophToken();
+  if(!token) return [];
+  const res = await fetch(
+    `https://api.github.com/repos/${VOPH_OWNER}/${VOPH_REPO}/contents/${PORADY_FILE}`,
+    { headers:{ "Authorization":"Bearer "+token, "Accept":"application/vnd.github.raw+json" }, cache:"no-store" }
+  );
+  if(res.status === 404) return [];               // soubor ještě neexistuje — první porada ho založí
+  if(res.status === 401 || res.status === 403){
+    localStorage.removeItem("voph_gh_token");
+    vophNeedToken("Token neplatí nebo vypršel — vlož nový.");
+    return [];
+  }
+  if(!res.ok){ vophPoradaStatus("Chyba načtení porad ("+res.status+")."); return []; }
+  const text = await res.text();
+  return text.split("\n").filter(Boolean)
+    .map(l => { try{ return JSON.parse(l); }catch(e){ return null; } })
+    .filter(Boolean);
+}
+
+/* ---------- zápis (read → modify → write se SHA, retry při konfliktu) ----------
+   mutate(list) dostane ČERSTVÝ seznam z repa; vrátí false, pokud se nemá nic zapisovat. */
+async function vophPoradyPersist(mutate, commitMsg){
+  const token = vophToken();
+  if(!token){ vophNeedToken("Nejdřív vlož token."); return false; }
+  const url = `https://api.github.com/repos/${VOPH_OWNER}/${VOPH_REPO}/contents/${PORADY_FILE}`;
+  const H = { "Authorization":"Bearer "+token, "Accept":"application/vnd.github+json" };
+
+  for(let attempt = 0; attempt < 3; attempt++){
+    let sha = null, list = [];
+    const res = await fetch(url, { headers:H, cache:"no-store" });
+    if(res.status === 401 || res.status === 403){
+      localStorage.removeItem("voph_gh_token");
+      vophNeedToken("Token neplatí nebo vypršel — vlož nový.");
+      return false;
+    }
+    if(res.ok){
+      const meta = await res.json();
+      sha = meta.sha;
+      list = vophB64Decode(meta.content).split("\n").filter(Boolean)
+        .map(l => { try{ return JSON.parse(l); }catch(e){ return null; } }).filter(Boolean);
+    } else if(res.status !== 404){
+      vophPoradaStatus("Chyba načtení porad ("+res.status+")."); return false;
+    }
+
+    if(mutate(list) === false){ porady = list; vophRenderPorady(); return true; }
+
+    const body = list.map(m => JSON.stringify(m)).join("\n") + (list.length ? "\n" : "");
+    const payload = { message: commitMsg, content: vophB64Encode(body) };
+    if(sha) payload.sha = sha;
+
+    const put = await fetch(url, { method:"PUT", headers:H, body: JSON.stringify(payload) });
+    if(put.ok){ porady = list; vophRenderPorady(); return true; }
+    if(put.status === 409 || put.status === 422){    // někdo zapsal mezitím — zopakovat nad čerstvou verzí
+      await new Promise(r => setTimeout(r, 400 + attempt*400));
+      continue;
+    }
+    vophPoradaStatus("Uložení selhalo ("+put.status+").");
+    return false;
+  }
+  vophPoradaStatus("Uložení selhalo — soubor právě mění někdo jiný. Zkus to znovu.");
+  return false;
+}
+
+/* Pohodlný obal: najdi poradu podle id v čerstvém seznamu a uprav ji. */
+async function vophPoradaMutate(mId, fn, commitMsg){
+  if(vophPoradaBusy) return false;
+  vophPoradaBusy = true;
+  vophPoradaStatus("Ukládám…");
+  const ok = await vophPoradyPersist(list => {
+    const m = list.find(x => x.id === mId);
+    if(!m) return false;
+    if(fn(m) === false) return false;
+    m.updated = new Date().toISOString();
+  }, commitMsg);
+  vophPoradaBusy = false;
+  vophPoradaStatus(ok ? "Uloženo." : "");
+  return ok;
+}
+
+/* ---------- viditelnost: jen účastníci (Nam/Duc vidí vše) ---------- */
+function vophPoradyVisible(){
+  const me = vophMyIdentity();
+  const isAdmin = !me || VOPH_ADMINS.includes(me);
+  return porady
+    .filter(m => (m.status || "open") === "open")
+    .filter(m => isAdmin || toArr(m.participants).includes(me) || m.created_by === me)
+    .sort((a,b) => String(a.when || "9999").localeCompare(String(b.when || "9999")));
+}
+
+function vophPoradaFormatWhen(when){
+  if(!when) return "termín nezadán";
+  const d = new Date(when);
+  if(isNaN(d)) return when;
+  const pad = n => String(n).padStart(2,"0");
+  return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/* ---------- render ---------- */
+function vophRenderPorady(){
+  const box = document.getElementById("poradaList");
+  if(!box) return;
+  const list = vophPoradyVisible();
+  if(!list.length){
+    box.innerHTML = `<div class="porada-empty">Žádná porada. Novou založíš tlačítkem výše.</div>`;
+    return;
+  }
+  box.innerHTML = list.map(m => vophPoradaHtml(m)).join("");
+}
+
+function vophPoradaHtml(m){
+  const items = Array.isArray(m.items) ? m.items : [];
+  const people = toArr(m.participants);
+  const allDone = items.length > 0 && items.every(i => i.done);
+  const itemsHtml = items.map((it, idx) => {
+    const last = idx === items.length - 1;
+    return `<div class="porada-item ${it.done ? "is-done" : ""}">
+      <button class="pchk ${it.done ? "on" : ""}" title="Hotovo / zpět"
+              onclick="vophPoradaToggle('${m.id}','${it.id}')">${it.done ? "✓" : ""}</button>
+      <span class="branch">${last ? "└" : "├"}</span>
+      <div class="it-text" title="Klikni pro úpravu"
+           onclick="vophPoradaEdit(this,'${m.id}','${it.id}','text')">${vophEsc(it.text) || "<i style='color:var(--muted)'>(prázdné)</i>"}</div>
+      <input type="text" class="pkom" placeholder="Komentář" value="${vophEscAttr(it.comment || "")}"
+             onchange="vophPoradaSetComment(this,'${m.id}','${it.id}')">
+    </div>`;
+  }).join("");
+
+  return `<div class="porada ${m.done ? "is-done" : ""}" data-id="${m.id}">
+    <div class="porada-head">
+      <button class="pchk ${m.done ? "on" : ""}" title="Odškrtnout celou poradu"
+              onclick="vophPoradaToggle('${m.id}',null)">${m.done ? "✓" : ""}</button>
+      <div class="porada-head-main">
+        <span class="porada-title" title="Klikni pro úpravu názvu"
+              onclick="vophPoradaEdit(this,'${m.id}',null,'title')">${vophEsc(m.title)}</span>
+        <div class="porada-meta">
+          <em title="Klikni pro úpravu účastníků" onclick="vophPoradaEditPeople(this,'${m.id}')">👥 ${people.length ? vophEsc(people.join(", ")) : "účastníci nezadáni"}</em>
+          <em title="Klikni pro úpravu termínu" onclick="vophPoradaEdit(this,'${m.id}',null,'when')">🕘 ${vophEsc(vophPoradaFormatWhen(m.when))}</em>
+          <span style="opacity:.7">${vophEsc(m.id)}</span>
+        </div>
+        <div class="porada-note ${m.note ? "" : "empty"}" title="Klikni pro úpravu obsahu"
+             onclick="vophPoradaEdit(this,'${m.id}',null,'note')">${m.note ? vophEsc(m.note) : "+ obsah porady (nepovinné)"}</div>
+      </div>
+      <input type="text" class="pkom" placeholder="Komentář k poradě" value="${vophEscAttr(m.comment || "")}"
+             onchange="vophPoradaSetComment(this,'${m.id}',null)">
+    </div>
+
+    <div class="porada-items">
+      ${itemsHtml || `<div class="porada-empty">Zatím žádné body — přidej první níže.</div>`}
+      <div class="porada-newitem">
+        <span class="branch">+</span>
+        <input type="text" placeholder="Nový bod / otázka / připomínka — Enter přidá"
+               onkeydown="if(event.key==='Enter'){event.preventDefault(); vophPoradaAddItem(this,'${m.id}');}"
+               onblur="vophPoradaAddItem(this,'${m.id}')">
+      </div>
+    </div>
+
+    <div class="porada-foot">
+      <button class="btn-porada primary" onclick="vophPoradaFinish(this,'${m.id}')">✓ Dokončit poradu</button>
+      <span class="porada-status">${items.length ? `${items.filter(i=>i.done).length}/${items.length} bodů hotovo${allDone ? " — vše odškrtnuto" : ""}` : ""}</span>
+    </div>
+  </div>`;
+}
+
+/* ---------- akce ---------- */
+function vophPoradaToggleNew(){
+  const form = document.getElementById("poradaNewForm");
+  const open = form.classList.toggle("open");
+  document.getElementById("poradaNewBtn").textContent = open ? "− Skrýt formulář" : "+ Nová porada";
+  if(open){
+    const me = vophMyIdentity();
+    document.getElementById("pnewPeople").innerHTML =
+      `<span style="color:var(--muted)">Účastníci:</span>` + TEAM.map(p =>
+        `<label><input type="checkbox" value="${p}" ${p === me ? "checked" : ""}> ${p}</label>`).join("");
+    document.getElementById("pnewStatus").textContent = "";
+    document.getElementById("pnewTitle").focus();
+  }
+}
+
+async function vophPoradaCreate(){
+  const title = document.getElementById("pnewTitle").value.trim();
+  const st = document.getElementById("pnewStatus");
+  if(!title){ st.textContent = "Název nesmí být prázdný."; return; }
+  const note = document.getElementById("pnewNote").value.trim();
+  const when = document.getElementById("pnewWhen").value || "";
+  const participants = [...document.querySelectorAll("#pnewPeople input:checked")].map(i => i.value);
+  const me = vophMyIdentity() || (vophWhoAmI() !== "Všichni" ? vophWhoAmI() : null);
+
+  const btn = document.getElementById("pnewSubmit");
+  btn.disabled = true; st.textContent = "Zakládám…";
+  const rec = {
+    id: vophPoradaGenId("p"),
+    created: todayISO(),
+    created_by: me,
+    title, note, when,
+    participants,
+    status: "open",
+    done: false,
+    comment: "",
+    items: [],
+    updated: new Date().toISOString()
+  };
+  const ok = await vophPoradyPersist(list => { list.push(rec); }, `dashboard: nová porada „${title}"`);
+  btn.disabled = false;
+  if(ok){
+    document.getElementById("pnewTitle").value = "";
+    document.getElementById("pnewNote").value = "";
+    document.getElementById("pnewWhen").value = "";
+    st.textContent = "";
+    vophPoradaToggleNew();
+    vophPoradaStatus(`Porada „${title}" založena.`);
+  } else {
+    st.textContent = "Založení selhalo — zkus znovu.";
+  }
+}
+
+async function vophPoradaToggle(mId, itemId){
+  await vophPoradaMutate(mId, m => {
+    if(itemId){
+      const it = (m.items || []).find(x => x.id === itemId);
+      if(!it) return false;
+      it.done = !it.done;
+    } else {
+      m.done = !m.done;
+    }
+  }, `dashboard: porada ${mId} — odškrtnutí`);
+}
+
+/* Inline editace textových polí (title / note / when / item.text) */
+function vophPoradaEdit(el, mId, itemId, field){
+  if(el.querySelector(".pedit")) return;
+  const m = porady.find(x => x.id === mId);
+  if(!m) return;
+  const current = itemId
+    ? ((m.items || []).find(x => x.id === itemId) || {}).text || ""
+    : (m[field] || "");
+  const type = field === "when" ? "datetime-local" : "text";
+  const prev = el.innerHTML;
+  el.innerHTML = `<input type="${type}" class="pedit" value="${vophEscAttr(current)}">`;
+  const input = el.querySelector(".pedit");
+  input.focus();
+  if(type === "text") input.select();
+  let settled = false;
+  const cancel = () => { if(settled) return; settled = true; el.innerHTML = prev; };
+  const commit = async () => {
+    if(settled) return; settled = true;
+    const val = input.value.trim();
+    if(val === String(current).trim()){ el.innerHTML = prev; return; }
+    await vophPoradaMutate(mId, mm => {
+      if(itemId){
+        const it = (mm.items || []).find(x => x.id === itemId);
+        if(!it) return false;
+        it.text = val;
+      } else {
+        mm[field] = val;
+      }
+    }, `dashboard: porada ${mId} — úprava ${field}`);
+    vophRenderPorady();
+  };
+  input.onblur = commit;
+  input.onkeydown = e => {
+    if(e.key === "Enter"){ e.preventDefault(); input.blur(); }
+    if(e.key === "Escape"){ e.preventDefault(); cancel(); }
+  };
+  input.onclick = e => e.stopPropagation();
+}
+
+/* Editace účastníků — vícenásobný výběr */
+function vophPoradaEditPeople(el, mId){
+  if(el.querySelector(".cell-editor")) return;
+  const m = porady.find(x => x.id === mId);
+  if(!m) return;
+  const cur = toArr(m.participants);
+  const prev = el.innerHTML;
+  el.innerHTML = `<div class="cell-editor" onclick="event.stopPropagation()">
+    ${TEAM.map(p => `<label><input type="checkbox" value="${p}" ${cur.includes(p) ? "checked" : ""}> ${p}</label>`).join("")}
+    <div class="editor-actions">
+      <button class="ok" onclick="vophPoradaApplyPeople(this,'${mId}')">Uložit</button>
+      <button onclick="vophRenderPorady()">Zrušit</button>
+    </div>
+  </div>`;
+  el.dataset.prev = prev;
+}
+
+async function vophPoradaApplyPeople(btnEl, mId){
+  const editor = btnEl.closest(".cell-editor");
+  const people = [...editor.querySelectorAll("input[type=checkbox]:checked")].map(i => i.value);
+  btnEl.disabled = true; btnEl.textContent = "Ukládám…";
+  await vophPoradaMutate(mId, m => { m.participants = people; }, `dashboard: porada ${mId} — účastníci`);
+  vophRenderPorady();
+}
+
+async function vophPoradaSetComment(input, mId, itemId){
+  const val = input.value.trim();
+  await vophPoradaMutate(mId, m => {
+    if(itemId){
+      const it = (m.items || []).find(x => x.id === itemId);
+      if(!it) return false;
+      if((it.comment || "") === val) return false;
+      it.comment = val;
+    } else {
+      if((m.comment || "") === val) return false;
+      m.comment = val;
+    }
+  }, `dashboard: porada ${mId} — komentář`);
+}
+
+async function vophPoradaAddItem(input, mId){
+  const text = input.value.trim();
+  if(!text) return;
+  input.value = "";
+  input.disabled = true;
+  await vophPoradaMutate(mId, m => {
+    if(!Array.isArray(m.items)) m.items = [];
+    m.items.push({ id: vophPoradaGenId("i"), text, done: false, comment: "", by: vophMyIdentity() || null, at: new Date().toISOString() });
+  }, `dashboard: porada ${mId} — nový bod`);
+  vophRenderPorady();
+  // vrátit fokus na nový prázdný řádek stejné porady, ať jde psát dál
+  const box = document.querySelector(`.porada[data-id="${mId}"] .porada-newitem input`);
+  if(box) box.focus();
+}
+
+/* ---------- dokončení porady → textový zápis + odebrání z přehledu ---------- */
+function vophPoradaToText(m, who){
+  const pad = n => String(n).padStart(2,"0");
+  const now = new Date();
+  const nowStr = `${pad(now.getDate())}.${pad(now.getMonth()+1)}.${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const items = Array.isArray(m.items) ? m.items : [];
+  const lines = [];
+  lines.push(`PORADA: ${m.title}`);
+  lines.push(`Termín: ${vophPoradaFormatWhen(m.when)}`);
+  lines.push(`Účastníci: ${toArr(m.participants).join(", ") || "—"}`);
+  lines.push(`Založil: ${m.created_by || "—"} (${m.created || "—"})`);
+  lines.push(`Dokončil: ${who || "—"} dne ${nowStr}`);
+  lines.push(`ID: ${m.id}`);
+  lines.push("");
+  if(m.note){ lines.push("OBSAH PORADY"); lines.push(m.note); lines.push(""); }
+  if(m.comment){ lines.push(`Komentář k poradě: ${m.comment}`); lines.push(""); }
+  lines.push("BODY PORADY");
+  if(!items.length){ lines.push("(žádné body)"); }
+  items.forEach(it => {
+    lines.push(`${it.done ? "[x]" : "[ ]"} ${it.text}`);
+    if(it.comment) lines.push(`    Komentář: ${it.comment}`);
+  });
+  lines.push("");
+  lines.push("--- DATA (JSON, pro Claude) ---");
+  lines.push(JSON.stringify({ ...m, status:"done", completed_at: now.toISOString(), completed_by: who || null }, null, 1));
+  lines.push("");
+  return lines.join("\n");
+}
+
+async function vophPoradaFinish(btn, mId){
+  const m = porady.find(x => x.id === mId);
+  if(!m) return;
+  const items = Array.isArray(m.items) ? m.items : [];
+  const openCnt = items.filter(i => !i.done).length;
+  const warn = openCnt ? `\n\nPozor: ${openCnt} bod(ů) není odškrtnuto — do zápisu se uloží jako nesplněné.` : "";
+  if(!confirm(`Dokončit poradu „${m.title}"?${warn}\n\nZápis se uloží do ${PORADY_DONE_DIR}/ a porada zmizí z dashboardu.\nClaude ho pak přečte a navrhne úkoly.`)) return;
+
+  const token = vophToken();
+  if(!token){ vophNeedToken("Nejdřív vlož token."); return; }
+  const who = vophMyIdentity() || (vophWhoAmI() !== "Všichni" ? vophWhoAmI() : null);
+  btn.disabled = true; btn.textContent = "Ukládám zápis…";
+
+  const datePart = (m.when && m.when.length >= 10) ? m.when.slice(0,10) : todayISO();
+  const fname = `${datePart}-${vophPoradaSlug(m.title)}-${m.id.slice(-4)}.txt`;
+  const res = await fetch(
+    `https://api.github.com/repos/${VOPH_OWNER}/${VOPH_REPO}/contents/${PORADY_DONE_DIR}/${fname}`,
+    { method:"PUT",
+      headers:{ "Authorization":"Bearer "+token, "Accept":"application/vnd.github+json" },
+      body: JSON.stringify({ message:`dashboard: zápis z porady „${m.title}"`, content: vophB64Encode(vophPoradaToText(m, who)) }) }
+  );
+  if(!res.ok){
+    btn.disabled = false; btn.textContent = "✓ Dokončit poradu";
+    vophPoradaStatus(`Zápis se nepodařilo uložit (${res.status}) — porada zůstává otevřená.`);
+    return;
+  }
+
+  btn.textContent = "Uklízím…";
+  const ok = await vophPoradyPersist(list => {
+    const i = list.findIndex(x => x.id === mId);
+    if(i === -1) return false;
+    list.splice(i, 1);
+  }, `dashboard: porada ${mId} dokončena`);
+
+  vophPoradaStatus(ok
+    ? `Porada „${m.title}" dokončena — zápis uložen jako ${PORADY_DONE_DIR}/${fname}. Řekni Claudovi „zpracuj porady", aby z ní navrhl úkoly.`
+    : `Zápis uložen (${fname}), ale porada se nepodařilo odebrat z přehledu — zkus Aktualizovat teď.`);
+  vophRenderPorady();
 }
 
 /* ============================================================
