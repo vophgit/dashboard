@@ -262,9 +262,9 @@
   .porada-empty{font-size:12.5px; color:var(--muted); padding:6px 0;}
 
   /* ============================================================
-     NOTIFIKACE — plovoucí zvoneček v levém horním rohu obrazovky
+     NOTIFIKACE — plovoucí zvoneček v pravém dolním rohu obrazovky
      ============================================================ */
-  #notifDock{position:fixed; top:12px; left:12px; z-index:900; display:none;}
+  #notifDock{position:fixed; bottom:18px; right:18px; z-index:900; display:none;}
   #notifBell{
     position:relative; width:54px; height:54px; border-radius:50%; border:none; cursor:pointer;
     background:#fff; color:var(--brand-dark); font-size:25px; line-height:1;
@@ -281,7 +281,7 @@
   }
   #notifBadge.on{display:flex;}
   #notifPanel{
-    display:none; position:absolute; top:62px; left:0; width:min(400px, calc(100vw - 24px));
+    display:none; position:absolute; bottom:64px; right:0; width:min(400px, calc(100vw - 36px));
     background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden;
     box-shadow:0 12px 40px rgba(0,0,0,.25);
   }
@@ -320,13 +320,11 @@
     12%,62%{background:var(--brand-soft);}
   }
   tr.row-flash > td{animation:vophRowFlash 2.6s ease-out;}
-  /* Aby zvoneček nepřekrýval nadpis v hlavičce */
-  @media (max-width:1990px){ header.top > .wrap{padding-left:80px;} }
 </style>
 </head>
 <body>
 
-<!-- NOTIFIKACE — plovoucí zvoneček (levý horní roh obrazovky) -->
+<!-- NOTIFIKACE — plovoucí zvoneček (pravý dolní roh obrazovky) -->
 <div id="notifDock">
   <button id="notifBell" onclick="vophNotifToggle(event)" title="Upozornění">
     🔔<span id="notifBadge"></span>
