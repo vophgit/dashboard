@@ -798,6 +798,7 @@ function vophSaveToken(){
   if(!t) return;
   localStorage.setItem("voph_gh_token", t);
   document.getElementById("tokenBox").style.display = "none";
+  document.getElementById("syncStatus").textContent = "";
   vophLoadAll();
 }
 function vophNeedToken(msg){
@@ -813,7 +814,8 @@ async function vophFetchJsonl(path){
   if(!token){ vophNeedToken("Nejdřív vlož token."); return []; }
   const res = await fetch(
     `https://api.github.com/repos/${VOPH_OWNER}/${VOPH_REPO}/contents/${path}`,
-    { headers:{ "Authorization":"Bearer "+token, "Accept":"application/vnd.github.raw+json" } }
+    /* no-store: GitHub posílá max-age=60, bez toho prohlížeč po změně ukazuje stará data */
+    { headers:{ "Authorization":"Bearer "+token, "Accept":"application/vnd.github.raw+json" }, cache:"no-store" }
   );
   if(res.status===401 || res.status===403){
     localStorage.removeItem("voph_gh_token");
@@ -1550,7 +1552,7 @@ async function vophRemoveAttachment(id, path){
   if(token){
     try{
       const meta = await fetch(`https://api.github.com/repos/${VOPH_OWNER}/${VOPH_REPO}/contents/${path}`,
-        { headers:{ "Authorization":"Bearer "+token, "Accept":"application/vnd.github+json" } });
+        { headers:{ "Authorization":"Bearer "+token, "Accept":"application/vnd.github+json" }, cache:"no-store" });
       if(meta.ok){
         const metaJson = await meta.json();
         await fetch(`https://api.github.com/repos/${VOPH_OWNER}/${VOPH_REPO}/contents/${path}`, {
@@ -1812,6 +1814,17 @@ async function vophSyncNow(){
   const original = btn.innerHTML;
   btn.innerHTML = "⏳ Spouštím sync…";
 
+  /* Běhy syncu čteme vždy čerstvé (no-store) a čekáme na NÁŠ běh = s vyšším id
+     než poslední běh před spuštěním. Dřív se brala odpověď z mezipaměti prohlížeče
+     (stále "queued") a tlačítko viselo, nebo se vzal předchozí dokončený běh. */
+  const runsUrl = `https://api.github.com/repos/${VOPH_OWNER}/${VOPH_REPO}/actions/workflows/sync.yml/runs?per_page=5`;
+  const runsReq = { headers:{ "Authorization":"Bearer "+token, "Accept":"application/vnd.github+json" }, cache:"no-store" };
+  let lastRunId = 0;
+  try{
+    const before = await (await fetch(runsUrl, runsReq)).json();
+    lastRunId = Math.max(0, ...((before.workflow_runs||[]).map(r => r.id)));
+  }catch(e){}
+
   const dispatch = await fetch(
     `https://api.github.com/repos/${VOPH_OWNER}/${VOPH_REPO}/actions/workflows/sync.yml/dispatches`,
     { method:"POST",
@@ -1827,14 +1840,12 @@ async function vophSyncNow(){
   }
 
   btn.innerHTML = "⏳ Synchronizuji… (~30 s)";
-  for(let i=0;i<18;i++){
-    await new Promise(r=>setTimeout(r,5000));
+  for(let i=0;i<30;i++){
+    await new Promise(r=>setTimeout(r, i < 2 ? 3000 : 4000));
     try{
-      const r = await fetch(
-        `https://api.github.com/repos/${VOPH_OWNER}/${VOPH_REPO}/actions/workflows/sync.yml/runs?per_page=1`,
-        { headers:{ "Authorization":"Bearer "+token, "Accept":"application/vnd.github+json" } });
-      const data = await r.json();
-      const run = data.workflow_runs && data.workflow_runs[0];
+      const data = await (await fetch(runsUrl, runsReq)).json();
+      const run = (data.workflow_runs||[]).filter(r => r.id > lastRunId)
+                                         .sort((a,b) => b.id - a.id)[0];
       if(run && run.status === "completed") break;
     }catch(e){}
   }
