@@ -205,10 +205,14 @@
 
   /* Řádek pro přidání nového úkolu — první řádek tabulky Úkol, stejný vzhled jako ostatní */
   tr.add-row td{background:var(--brand-softer); vertical-align:middle; position:sticky; z-index:5; top:34px;}
-  tr.add-row input[type=text], tr.add-row input[type=date], tr.add-row select{
+  tr.add-row input[type=text], tr.add-row input[type=date], tr.add-row select, tr.add-row textarea{
     font:inherit; font-size:12.5px; padding:6px 8px; border-radius:6px; border:1px solid var(--line); width:100%;
   }
-  tr.add-row .add-desc{min-width:160px;}
+  /* Popis se zalamuje na další řádky a pole roste s textem (vophAddDescGrow) */
+  tr.add-row .add-desc{min-width:220px; display:block; resize:none; overflow:hidden; line-height:1.4;
+    white-space:pre-wrap; overflow-wrap:anywhere; min-height:32px;}
+  /* Kdo: celé jméno, ne useknuté na šířku úzkého sloupce */
+  tr.add-row #addWho{width:auto; min-width:96px; padding-right:24px;}
   .add-submit{font:inherit; font-size:12px; padding:6px 12px; border-radius:6px; border:none; background:var(--brand); color:var(--on-brand); font-weight:700; cursor:pointer; white-space:nowrap;}
   .add-submit:disabled{opacity:.5; cursor:not-allowed;}
   .add-status{font-size:11px; color:var(--muted); margin-top:4px;}
@@ -1172,6 +1176,7 @@ function vophRenderTaskTable(){
 /* Zajistí, že řádek "Přidat úkol" zůstane přilepený hned pod hlavičkou tabulky
    při scrollování (ne jen jako první řádek, co odjede se zbytkem obsahu). */
 function vophPinAddRow(){
+  vophAddDescGrow(document.getElementById("addDesc"));     // rozepsaný delší popis po překreslení hned celý
   const table = document.getElementById("taskBody") && document.getElementById("taskBody").closest("table");
   const headRow = table && table.querySelector("thead tr");
   const addRow = table && table.querySelector("tr.add-row");
@@ -1202,8 +1207,8 @@ function vophAddRowHtml(){
   const selectedWho = vophAddDraftWho();
   return `
     <tr class="add-row">
-      <td><input type="text" class="add-desc" id="addDesc" placeholder="Popis úkolu…"
-                  value="${vophEsc(vophAddDraft.desc)}" oninput="vophAddDraft.desc = this.value"></td>
+      <td><textarea class="add-desc" id="addDesc" rows="1" placeholder="Popis úkolu…"
+                  oninput="vophAddDraft.desc = this.value; vophAddDescGrow(this)">${vophEsc(vophAddDraft.desc)}</textarea></td>
       <td>
         <select id="addWho" onchange="vophAddDraft.who = this.value">
           ${TEAM.map(p => `<option ${p===selectedWho?"selected":""}>${p}</option>`).join("")}
@@ -1223,6 +1228,13 @@ function vophAddRowHtml(){
         <div class="add-status" id="addStatus"></div>
       </td>
     </tr>`;
+}
+
+/* Pole popisu roste s textem (zalomené řádky), po vykreslení i po psaní */
+function vophAddDescGrow(el){
+  if(!el) return;
+  el.style.height = "auto";
+  el.style.height = el.scrollHeight + 2 + "px";
 }
 
 async function vophSubmitAddRow(){
