@@ -216,6 +216,8 @@
   .add-submit{font:inherit; font-size:12px; padding:6px 12px; border-radius:6px; border:none; background:var(--brand); color:var(--on-brand); font-weight:700; cursor:pointer; white-space:nowrap;}
   .add-submit:disabled{opacity:.5; cursor:not-allowed;}
   .add-status{font-size:11px; color:var(--muted); margin-top:4px;}
+  .add-actions{display:flex; align-items:center; gap:6px;}
+  tr.add-row .add-files{margin:5px 0 0;}
 
   .checklist{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px;}
   .checklist li{font-size:13px; color:var(--muted); display:flex; gap:8px;}
@@ -1195,7 +1197,24 @@ function vophWhoDisplay(t){
 /* ============================================================
    ŘÁDEK „PŘIDAT ÚKOL" — první řádek tabulky Úkol
 ============================================================ */
-let vophAddDraft = { who: null, block: ["inbox"], domain: [], desc: "", due: "" };
+let vophAddDraft = { who: null, block: ["inbox"], domain: [], desc: "", due: "", files: [] };
+
+/* Soubory vybrané v řádku přidání — drží se jen v prohlížeči, nahrají se až po „Přidat úkol" */
+function vophAddDraftFiles(input){
+  const tooBig = [];
+  [...input.files].forEach(f => {
+    if(f.size > VOPH_ATTACH_MAX) tooBig.push(`${f.name} (${vophFormatSize(f.size)})`);
+    else vophAddDraft.files.push(f);
+  });
+  input.value = "";
+  if(tooBig.length) alert(`Příliš velké soubory (limit 8 MB) — nepřidány:\n${tooBig.join("\n")}`);
+  vophRenderTaskTable();
+}
+
+function vophAddDraftRemoveFile(i){
+  vophAddDraft.files.splice(i, 1);
+  vophRenderTaskTable();
+}
 
 function vophAddDraftWho(){
   if(vophAddDraft.who) return vophAddDraft.who;
@@ -1224,7 +1243,18 @@ function vophAddRowHtml(){
       <td><input type="date" id="addDue" value="${vophAddDraft.due}" placeholder="${todayISO()}"
                   onchange="vophAddDraft.due = this.value"></td>
       <td>
-        <button class="add-submit" id="addSubmitBtn" onclick="vophSubmitAddRow()">+ Přidat úkol</button>
+        <div class="add-actions">
+          <label class="attach-btn" title="Vybrat soubory, které se nahrají jako přílohy úkolu">
+            📎 Příloha
+            <input type="file" multiple style="display:none" onchange="vophAddDraftFiles(this)">
+          </label>
+          <button class="add-submit" id="addSubmitBtn" onclick="vophSubmitAddRow()">+ Přidat úkol</button>
+        </div>
+        ${vophAddDraft.files.length ? `<div class="attach-row add-files">${vophAddDraft.files.map((f,i) => `
+          <span class="attachment-chip" title="${vophEscAttr(f.name)} (${vophFormatSize(f.size)})">
+            📎<span class="fname">${vophEsc(f.name)}</span>
+            <span class="rm" onclick="vophAddDraftRemoveFile(${i})" title="Odebrat">✕</span>
+          </span>`).join("")}</div>` : ""}
         <div class="add-status" id="addStatus"></div>
       </td>
     </tr>`;
@@ -1256,17 +1286,37 @@ async function vophSubmitAddRow(){
     action:"add", id, who, domain, block, desc, due, created_by: createdBy,
     source:"dashboard", ts
   });
-  btn.disabled = false;
-  if(ok){
-    // Okamžitě zobrazit v tabulce Úkol — nečekat na příští sync
-    openTasks.push({ id, created, who, domain, weight:null, block, desc, due, updated: ts, created_by: createdBy });
-    vophAddDraft = { who: null, block:["inbox"], domain:[], desc:"", due:"" };
-    vophRenderAll();
-    // Řádek pro přidání se při renderu vytváří znovu — status prvek musí být čerstvý
-    document.getElementById("addStatus").textContent = `Přidáno (${id}) — zobrazeno níže. Do repozitáře se zapíše po syncu.`;
-  } else {
+  if(!ok){
+    btn.disabled = false;
     status.textContent = "Odeslání selhalo — zkus znovu.";
+    return;
   }
+
+  // Přílohy: nahrát soubory a zapsat je do úkolu jako "update" (stejně jako 📎 u existujícího úkolu)
+  const files = vophAddDraft.files.slice();
+  const attachments = [], failed = [];
+  for(let i = 0; i < files.length; i++){
+    status.textContent = `Nahrávám přílohu ${i+1}/${files.length}…`;
+    let a = null;
+    try{ a = await vophUploadAttachment(files[i], id); }catch(e){ a = null; }
+    if(a && a !== "auth") attachments.push(a); else failed.push(files[i].name);
+  }
+  let attachNote = "";
+  if(attachments.length){
+    const okAtt = await vophPushInboxItem({ action:"update", id, attachments, ts:new Date().toISOString() });
+    if(!okAtt) attachNote = " Přílohy nahrány, ale zápis k úkolu se nezdařil.";
+  }
+  if(failed.length) attachNote += ` Nenahrané přílohy: ${failed.join(", ")}.`;
+
+  btn.disabled = false;
+  // Okamžitě zobrazit v tabulce Úkol — nečekat na příští sync
+  openTasks.push({ id, created, who, domain, weight:null, block, desc, due, updated: ts, created_by: createdBy,
+                   ...(attachments.length ? { attachments } : {}) });
+  vophAddDraft = { who: null, block:["inbox"], domain:[], desc:"", due:"", files: [] };
+  vophRenderAll();
+  // Řádek pro přidání se při renderu vytváří znovu — status prvek musí být čerstvý
+  document.getElementById("addStatus").textContent =
+    `Přidáno (${id}) — zobrazeno níže. Do repozitáře se zapíše po syncu.${attachNote}`;
 }
 
 function vophGenTaskId(){
@@ -1538,8 +1588,7 @@ function vophSanitizeFilename(name){
 async function vophHandleFileSelect(input, id){
   const file = input.files[0];
   if(!file) return;
-  const MAX_SIZE = 8 * 1024 * 1024; // 8 MB — bezpečná hranice pro Contents API
-  if(file.size > MAX_SIZE){
+  if(file.size > VOPH_ATTACH_MAX){
     alert(`Soubor je příliš velký (${vophFormatSize(file.size)}). Limit je 8 MB.`);
     input.value = "";
     return;
@@ -1553,32 +1602,14 @@ async function vophHandleFileSelect(input, id){
   let needsManualReset = true; // úspěch dělá reset přes vophRenderTaskTable(); jinak obnovíme ručně ve finally
 
   try{
-    const b64 = await vophFileToBase64(file);
-    const safeName = vophSanitizeFilename(file.name);
-    const uniquePrefix = Date.now().toString(36);
-    const path = `attachments/${id}/${uniquePrefix}-${safeName}`;
-    const who = vophWhoAmI();
-    const uploadedBy = (who && who !== "Všichni") ? who : "Nam";
-
-    const res = await fetch(`https://api.github.com/repos/${VOPH_OWNER}/${VOPH_REPO}/contents/${path}`, {
-      method:"PUT",
-      headers:{ "Authorization":"Bearer "+token, "Accept":"application/vnd.github+json" },
-      body: JSON.stringify({ message:`dashboard: příloha k ${id} (${safeName})`, content:b64 })
-    });
-
-    if(res.status===401 || res.status===403){
-      localStorage.removeItem("voph_gh_token");
-      vophNeedToken("Token neplatí nebo vypršel — vlož nový.");
-      return;
-    }
-    if(!res.ok){
+    const newAttachment = await vophUploadAttachment(file, id);
+    if(newAttachment === "auth") return;
+    if(!newAttachment){
       alert("Nahrání přílohy selhalo — zkus to znovu.");
       return;
     }
 
     const t = openTasks.find(x => x.id === id);
-    const newAttachment = { name: file.name, path, size: file.size,
-                             uploaded_at: new Date().toISOString(), uploaded_by: uploadedBy };
     const attachments = (t && t.attachments ? t.attachments : []).concat([newAttachment]);
     if(t) t.attachments = attachments;
     vophRenderTaskTable();
@@ -1597,6 +1628,35 @@ async function vophHandleFileSelect(input, id){
       btn.firstChild.textContent = "📎 Přidat soubor";
     }
   }
+}
+
+/* Nahraje jeden soubor do attachments/<id>/... a vrátí záznam přílohy pro task.
+   Vrací "auth" při neplatném tokenu (už je vyzváno k novému), null při jiné chybě. */
+const VOPH_ATTACH_MAX = 8 * 1024 * 1024; // 8 MB — bezpečná hranice pro Contents API
+
+async function vophUploadAttachment(file, id){
+  const token = vophToken();
+  if(!token){ vophNeedToken("Nejdřív vlož token."); return "auth"; }
+  const b64 = await vophFileToBase64(file);
+  const safeName = vophSanitizeFilename(file.name);
+  const uniquePrefix = Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+  const path = `attachments/${id}/${uniquePrefix}-${safeName}`;
+  const who = vophWhoAmI();
+  const uploadedBy = (who && who !== "Všichni") ? who : "Nam";
+
+  const res = await fetch(`https://api.github.com/repos/${VOPH_OWNER}/${VOPH_REPO}/contents/${path}`, {
+    method:"PUT",
+    headers:{ "Authorization":"Bearer "+token, "Accept":"application/vnd.github+json" },
+    body: JSON.stringify({ message:`dashboard: příloha k ${id} (${safeName})`, content:b64 })
+  });
+  if(res.status===401 || res.status===403){
+    localStorage.removeItem("voph_gh_token");
+    vophNeedToken("Token neplatí nebo vypršel — vlož nový.");
+    return "auth";
+  }
+  if(!res.ok) return null;
+  return { name: file.name, path, size: file.size,
+           uploaded_at: new Date().toISOString(), uploaded_by: uploadedBy };
 }
 
 function vophFileToBase64(file){
